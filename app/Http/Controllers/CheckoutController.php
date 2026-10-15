@@ -36,6 +36,7 @@ class CheckoutController extends Controller
         $total = $items->sum('subtotal');
 
         $sellers = DB::table('persons')
+            ->where('business_id', $this->businessId())
             ->where('type', 'seller')
             ->where('active', 1)
             ->orderBy('name')
@@ -46,6 +47,7 @@ class CheckoutController extends Controller
             ])
             ->values();
         $customers = DB::table('persons')
+            ->where('business_id', $this->businessId())
             ->where('type', 'customer')
             ->where('active', 1)
             ->orderBy('name')
@@ -151,5 +153,10 @@ class CheckoutController extends Controller
         }
 
         return $externalOrderId;
+    }
+
+    private function businessId(): int
+    {
+        return max((int) config('services.mini_erp.business_id'), 0);
     }
 }

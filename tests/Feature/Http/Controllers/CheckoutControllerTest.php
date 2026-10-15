@@ -21,12 +21,14 @@ class CheckoutControllerTest extends TestCase
         config()->set('services.mini_erp', [
             'url' => 'http://erp.test',
             'token' => 'catalog-token',
+            'business_id' => 1,
             'timeout' => 10,
             'connect_timeout' => 3,
         ]);
 
         Schema::create('products', function (Blueprint $table): void {
             $table->id();
+            $table->unsignedBigInteger('business_id')->default(1);
             $table->string('sku');
             $table->string('name');
             $table->decimal('sale_price', 15, 2);
@@ -34,6 +36,7 @@ class CheckoutControllerTest extends TestCase
         });
         Schema::create('persons', function (Blueprint $table): void {
             $table->id();
+            $table->unsignedBigInteger('business_id')->default(1);
             $table->string('name');
             $table->string('type');
             $table->boolean('active')->default(true);
@@ -55,6 +58,26 @@ class CheckoutControllerTest extends TestCase
             ->assertSee('type="submit"', false)
             ->assertSee('x-bind:disabled="submitting"', false)
             ->assertSessionHas('checkout.external_order_id', fn (string $id): bool => str($id)->isUuid());
+    }
+
+    public function test_checkout_only_displays_people_from_configured_business(): void
+    {
+        $this->insertProduct();
+        $this->insertPeople();
+        DB::table('persons')->insert([
+            'id' => 40,
+            'business_id' => 2,
+            'name' => 'Pessoa de outra empresa',
+            'type' => 'customer',
+            'active' => true,
+        ]);
+
+        $this->withSession(['cart' => [10 => 1]])
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('Cliente de teste')
+            ->assertSee('Vendedor de teste')
+            ->assertDontSee('Pessoa de outra empresa');
     }
 
     public function test_confirming_order_sends_only_ids_and_quantities_then_clears_cart(): void
@@ -92,6 +115,7 @@ class CheckoutControllerTest extends TestCase
         Http::assertSent(fn (Request $request): bool => $request->url() === 'http://erp.test/api/catalog/sales'
             && $request->method() === 'POST'
             && $request->hasHeader('Authorization', 'Bearer catalog-token')
+            && $request->hasHeader('X-Business-ID', '1')
             && $request->data() === [
                 'external_order_id' => $externalOrderId,
                 'items' => [['product_id' => 10, 'quantity' => 2]],

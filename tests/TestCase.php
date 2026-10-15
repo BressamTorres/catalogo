@@ -17,5 +17,7 @@ abstract class TestCase extends BaseTestCase
         ) {
             throw new RuntimeException('Os testes devem utilizar exclusivamente SQLite em memória.');
         }
+
+        config()->set('services.mini_erp.business_id', 1);
     }
 }

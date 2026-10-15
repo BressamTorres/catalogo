@@ -4,13 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CartController extends Controller
 {
     public function add(Request $request)
     {
         $data = $request->validate([
-            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'product_id' => [
+                'required',
+                'integer',
+                Rule::exists('products', 'id')
+                    ->where('business_id', max((int) config('services.mini_erp.business_id'), 0)),
+            ],
         ]);
 
         $product = Product::query()
@@ -64,7 +70,7 @@ class CartController extends Controller
 
         $id = $data['product_id'];
 
-        if (!isset($cart[$id])) {
+        if (! isset($cart[$id])) {
             return redirect()->route('cart.index');
         }
 

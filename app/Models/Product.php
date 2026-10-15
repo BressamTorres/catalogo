@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
@@ -12,6 +13,16 @@ class Product extends Model
         'active' => 'boolean',
         'sale_price' => 'decimal:2',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('business', function (Builder $query): void {
+            $query->where(
+                $query->qualifyColumn('business_id'),
+                max((int) config('services.mini_erp.business_id'), 0),
+            );
+        });
+    }
 
     public function imageUrl(): ?string
     {

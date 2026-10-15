@@ -17,6 +17,7 @@ class ProductControllerTest extends TestCase
 
         Schema::create('products', function (Blueprint $table): void {
             $table->id();
+            $table->unsignedBigInteger('business_id')->default(1);
             $table->string('sku');
             $table->string('name');
             $table->decimal('sale_price', 15, 2);
@@ -62,6 +63,17 @@ class ProductControllerTest extends TestCase
         $skuResponse->assertOk()
             ->assertSee('Calça Reta')
             ->assertDontSee('Camisa Essencial');
+    }
+
+    public function test_catalog_only_displays_products_from_configured_business(): void
+    {
+        $this->insertProduct(10, 'EMP-1', 'Produto da empresa configurada', '10.00');
+        $this->insertProduct(20, 'EMP-2', 'Produto de outra empresa', '20.00', businessId: 2);
+
+        $this->get(route('products.index'))
+            ->assertOk()
+            ->assertSee('Produto da empresa configurada')
+            ->assertDontSee('Produto de outra empresa');
     }
 
     public function test_catalog_uses_public_url_configured_for_product_photo_disk(): void
@@ -132,9 +144,11 @@ class ProductControllerTest extends TestCase
         bool $active = true,
         ?string $photoPath = null,
         ?string $photoDisk = null,
+        int $businessId = 1,
     ): void {
         DB::table('products')->insert([
             'id' => $id,
+            'business_id' => $businessId,
             'sku' => $sku,
             'name' => $name,
             'sale_price' => $salePrice,

@@ -23,6 +23,7 @@ class ExampleTest extends TestCase
 
         Schema::create('products', function (Blueprint $table): void {
             $table->id();
+            $table->unsignedBigInteger('business_id')->default(1);
             $table->string('sku');
             $table->string('name');
             $table->decimal('sale_price', 15, 2);

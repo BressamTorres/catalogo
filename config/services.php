@@ -38,6 +38,7 @@ return [
     'mini_erp' => [
         'url' => env('MINI_ERP_API_URL'),
         'token' => env('MINI_ERP_API_TOKEN'),
+        'business_id' => (int) env('MINI_ERP_BUSINESS_ID', 0),
         'timeout' => (int) env('MINI_ERP_API_TIMEOUT', 10),
         'connect_timeout' => (int) env('MINI_ERP_API_CONNECT_TIMEOUT', 3),
         'product_photo_urls' => [

@@ -22,8 +22,9 @@ class MiniErpSalesService
     {
         $baseUrl = rtrim((string) config('services.mini_erp.url'), '/');
         $token = (string) config('services.mini_erp.token');
+        $businessId = (int) config('services.mini_erp.business_id');
 
-        if ($baseUrl === '' || $token === '') {
+        if ($baseUrl === '' || $token === '' || $businessId <= 0) {
             throw new MiniErpApiException('A integração com o Mini ERP não está configurada.');
         }
 
@@ -32,6 +33,7 @@ class MiniErpSalesService
                 ->acceptJson()
                 ->asJson()
                 ->withToken($token)
+                ->withHeader('X-Business-ID', (string) $businessId)
                 ->connectTimeout((int) config('services.mini_erp.connect_timeout', 3))
                 ->timeout((int) config('services.mini_erp.timeout', 10))
                 ->post('/api/catalog/sales', $payload);
