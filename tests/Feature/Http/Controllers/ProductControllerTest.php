@@ -32,7 +32,7 @@ class ProductControllerTest extends TestCase
         $this->insertProduct(10, 'CAM-001', 'Camisa Essencial', '129.90');
         $this->insertProduct(20, 'CAL-001', 'Calça Indisponível', '199.90', false);
 
-        $response = $this->withSession(['cart' => [10 => 2]])->get(route('home'));
+        $response = $this->withSession(['catalog.1.cart' => [10 => 2]])->get(route('home'));
 
         $response->assertOk()
             ->assertSee('Camisa Essencial')
@@ -84,14 +84,14 @@ class ProductControllerTest extends TestCase
             'CAM-001',
             'Camisa Essencial',
             '129.90',
-            photoPath: 'products/camisa.jpg',
+            photoPath: 'businesses/1/products/camisa.jpg',
             photoDisk: 'r2_products',
         );
 
         $response = $this->get(route('products.index'));
 
         $response->assertOk()
-            ->assertSee('src="https://images.example.test/products/camisa.jpg"', false)
+            ->assertSee('src="https://images.example.test/businesses/1/products/camisa.jpg"', false)
             ->assertSee('alt="Camisa Essencial"', false);
     }
 

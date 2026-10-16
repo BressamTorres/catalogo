@@ -36,11 +36,11 @@ class CartControllerTest extends TestCase
             'name' => 'Camisa Essencial',
             'sale_price' => '49.90',
             'active' => true,
-            'photo_path' => 'products/camisa.jpg',
+            'photo_path' => 'businesses/1/products/camisa.jpg',
             'photo_disk' => 'r2_products',
         ]);
 
-        $response = $this->withSession(['cart' => [10 => 2]])->get(route('cart.index'));
+        $response = $this->withSession(['catalog.1.cart' => [10 => 2]])->get(route('cart.index'));
 
         $response->assertOk()
             ->assertSee('CATÁLOGO')
@@ -51,7 +51,7 @@ class CartControllerTest extends TestCase
             ->assertSee('R$ 99,80')
             ->assertSee('Continuar comprando')
             ->assertSee('Finalizar pedido')
-            ->assertSee('src="https://images.example.test/products/camisa.jpg"', false)
+            ->assertSee('src="https://images.example.test/businesses/1/products/camisa.jpg"', false)
             ->assertSee('aria-label="Carrinho com 2 itens"', false)
             ->assertSee('action="'.route('cart.update').'"', false);
     }
@@ -81,6 +81,6 @@ class CartControllerTest extends TestCase
             ->post(route('cart.add'), ['product_id' => 20])
             ->assertRedirectToRoute('products.index')
             ->assertSessionHasErrors('product_id')
-            ->assertSessionMissing('cart');
+            ->assertSessionMissing('catalog.1.cart');
     }
 }

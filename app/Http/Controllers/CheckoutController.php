@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\MiniErpApiException;
 use App\Http\Requests\ConfirmCheckoutRequest;
 use App\Models\Product;
+use App\Services\CatalogContext;
 use App\Services\MiniErpSalesService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,11 +16,14 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    public function __construct(private MiniErpSalesService $miniErpSales) {}
+    public function __construct(
+        private MiniErpSalesService $miniErpSales,
+        private CatalogContext $catalog,
+    ) {}
 
     public function index(Request $request): View|RedirectResponse
     {
-        $cart = $request->session()->get('cart', []);
+        $cart = $request->session()->get($this->catalog->cartSessionKey(), []);
 
         if (empty($cart)) {
             return redirect()->route('cart.index')
@@ -36,7 +40,7 @@ class CheckoutController extends Controller
         $total = $items->sum('subtotal');
 
         $sellers = DB::table('persons')
-            ->where('business_id', $this->businessId())
+            ->where('business_id', $this->catalog->id())
             ->where('type', 'seller')
             ->where('active', 1)
             ->orderBy('name')
@@ -47,7 +51,7 @@ class CheckoutController extends Controller
             ])
             ->values();
         $customers = DB::table('persons')
-            ->where('business_id', $this->businessId())
+            ->where('business_id', $this->catalog->id())
             ->where('type', 'customer')
             ->where('active', 1)
             ->orderBy('name')
@@ -65,7 +69,7 @@ class CheckoutController extends Controller
 
     public function store(ConfirmCheckoutRequest $request): RedirectResponse
     {
-        $cart = $request->session()->get('cart', []);
+        $cart = $request->session()->get($this->catalog->cartSessionKey(), []);
 
         if (empty($cart)) {
             return redirect()->route('cart.index')
@@ -105,18 +109,21 @@ class CheckoutController extends Controller
             return back()->withInput()->with('error', $exception->getMessage());
         }
 
-        $request->session()->forget(['cart', 'checkout.external_order_id']);
-        $request->session()->flash('checkout.completed_order', $order);
+        $request->session()->forget([
+            $this->catalog->cartSessionKey(),
+            $this->catalog->externalOrderSessionKey(),
+        ]);
+        $request->session()->flash($this->catalog->completedOrderSessionKey(), $order);
 
         return redirect()->route('checkout.completed');
     }
 
     public function completed(Request $request): View|RedirectResponse
     {
-        $order = $request->session()->get('checkout.completed_order');
+        $order = $request->session()->get($this->catalog->completedOrderSessionKey());
 
         if (! is_array($order)) {
-            return redirect('/produtos');
+            return to_route('products.index');
         }
 
         return view('checkout.completed', compact('order'));
@@ -145,18 +152,14 @@ class CheckoutController extends Controller
 
     private function externalOrderId(Request $request): string
     {
-        $externalOrderId = $request->session()->get('checkout.external_order_id');
+        $sessionKey = $this->catalog->externalOrderSessionKey();
+        $externalOrderId = $request->session()->get($sessionKey);
 
         if (! is_string($externalOrderId) || ! Str::isUuid($externalOrderId)) {
             $externalOrderId = (string) Str::uuid();
-            $request->session()->put('checkout.external_order_id', $externalOrderId);
+            $request->session()->put($sessionKey, $externalOrderId);
         }
 
         return $externalOrderId;
-    }
-
-    private function businessId(): int
-    {
-        return max((int) config('services.mini_erp.business_id'), 0);
     }
 }

@@ -3,19 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\CatalogContext;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class CartController extends Controller
 {
-    public function add(Request $request)
+    public function __construct(private CatalogContext $catalog) {}
+
+    public function add(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'product_id' => [
                 'required',
                 'integer',
                 Rule::exists('products', 'id')
-                    ->where('business_id', max((int) config('services.mini_erp.business_id'), 0)),
+                    ->where('business_id', $this->catalog->id())
+                    ->where('active', true),
             ],
         ]);
 
@@ -23,21 +29,22 @@ class CartController extends Controller
             ->where('active', true)
             ->findOrFail($data['product_id']);
 
-        $cart = $request->session()->get('cart', []);
+        $cartKey = $this->catalog->cartSessionKey();
+        $cart = $request->session()->get($cartKey, []);
 
         $id = $product->id;
 
         $cart[$id] = ($cart[$id] ?? 0) + 1;
 
-        $request->session()->put('cart', $cart);
+        $request->session()->put($cartKey, $cart);
 
-        return redirect('/produtos')
+        return to_route('products.index')
             ->with('success', 'Produto adicionado ao carrinho!');
     }
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $cart = $request->session()->get('cart', []);
+        $cart = $request->session()->get($this->catalog->cartSessionKey(), []);
 
         $products = Product::query()
             ->where('active', true)
@@ -59,19 +66,30 @@ class CartController extends Controller
         return view('cart.index', compact('items', 'total'));
     }
 
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'product_id' => ['required', 'integer'],
             'action' => ['required', 'in:increase,decrease,remove'],
         ]);
 
-        $cart = $request->session()->get('cart', []);
+        $cartKey = $this->catalog->cartSessionKey();
+        $cart = $request->session()->get($cartKey, []);
 
         $id = $data['product_id'];
 
         if (! isset($cart[$id])) {
             return redirect()->route('cart.index');
+        }
+
+        if (
+            $data['action'] !== 'remove'
+            && ! Product::query()->where('active', true)->whereKey($id)->exists()
+        ) {
+            unset($cart[$id]);
+            $request->session()->put($cartKey, $cart);
+
+            return to_route('cart.index')->with('error', 'O produto não está disponível neste catálogo.');
         }
 
         switch ($data['action']) {
@@ -92,7 +110,7 @@ class CartController extends Controller
                 break;
         }
 
-        $request->session()->put('cart', $cart);
+        $request->session()->put($cartKey, $cart);
 
         return redirect()->route('cart.index');
     }

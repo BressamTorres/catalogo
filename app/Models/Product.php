@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CatalogContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -19,7 +20,7 @@ class Product extends Model
         static::addGlobalScope('business', function (Builder $query): void {
             $query->where(
                 $query->qualifyColumn('business_id'),
-                max((int) config('services.mini_erp.business_id'), 0),
+                app(CatalogContext::class)->id(),
             );
         });
     }
@@ -37,6 +38,10 @@ class Product extends Model
             || str_contains($photoPath, '..')
             || preg_match('/^[a-z][a-z0-9+.-]*:\/\//i', $photoPath) === 1
         ) {
+            return null;
+        }
+
+        if (! str_starts_with($photoPath, 'businesses/'.app(CatalogContext::class)->id().'/products/')) {
             return null;
         }
 

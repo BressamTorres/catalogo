@@ -13,7 +13,8 @@
 @php
     $headerCartCount = isset($cartCount)
         ? (int) $cartCount
-        : (int) collect(session('cart', []))->sum(fn (mixed $quantity): int => max((int) $quantity, 0));
+        : (int) collect(session(app(\App\Services\CatalogContext::class)->cartSessionKey(), []))
+            ->sum(fn (mixed $quantity): int => max((int) $quantity, 0));
     $headerSearch = request()->routeIs('home', 'products.index') ? (string) request('search', '') : '';
 @endphp
 

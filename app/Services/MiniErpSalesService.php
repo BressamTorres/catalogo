@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\Http;
 
 class MiniErpSalesService
 {
+    public function __construct(
+        private CatalogContext $catalog,
+        private CatalogCredentialCipher $credentials,
+    ) {}
+
     /**
      * @param  array{
      *     external_order_id: string,
@@ -21,11 +26,16 @@ class MiniErpSalesService
     public function createSale(array $payload): array
     {
         $baseUrl = rtrim((string) config('services.mini_erp.url'), '/');
-        $token = (string) config('services.mini_erp.token');
-        $businessId = (int) config('services.mini_erp.business_id');
+        $business = $this->catalog->business();
 
-        if ($baseUrl === '' || $token === '' || $businessId <= 0) {
+        if ($baseUrl === '') {
             throw new MiniErpApiException('A integração com o Mini ERP não está configurada.');
+        }
+
+        try {
+            $token = $this->credentials->decryptToken($business);
+        } catch (\RuntimeException) {
+            throw new MiniErpApiException('A integração desta empresa com o Mini ERP não está configurada.');
         }
 
         try {
@@ -33,7 +43,7 @@ class MiniErpSalesService
                 ->acceptJson()
                 ->asJson()
                 ->withToken($token)
-                ->withHeader('X-Business-ID', (string) $businessId)
+                ->withHeader('X-Business-ID', (string) $business->getKey())
                 ->connectTimeout((int) config('services.mini_erp.connect_timeout', 3))
                 ->timeout((int) config('services.mini_erp.timeout', 10))
                 ->post('/api/catalog/sales', $payload);

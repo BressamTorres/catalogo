@@ -20,8 +20,7 @@ class CheckoutControllerTest extends TestCase
         $this->withoutVite();
         config()->set('services.mini_erp', [
             'url' => 'http://erp.test',
-            'token' => 'catalog-token',
-            'business_id' => 1,
+            'credentials_key' => 'base64:dGVzdC1jYXRhbG9nLWNyZWRlbnRpYWwta2V5LTEyMzQ=',
             'timeout' => 10,
             'connect_timeout' => 3,
         ]);
@@ -47,7 +46,7 @@ class CheckoutControllerTest extends TestCase
     {
         $this->insertProduct();
 
-        $response = $this->withSession(['cart' => [10 => 2]])
+        $response = $this->withSession(['catalog.1.cart' => [10 => 2]])
             ->get(route('checkout.index'));
 
         $response->assertOk()
@@ -57,7 +56,7 @@ class CheckoutControllerTest extends TestCase
             ->assertSee('Confirmar pedido')
             ->assertSee('type="submit"', false)
             ->assertSee('x-bind:disabled="submitting"', false)
-            ->assertSessionHas('checkout.external_order_id', fn (string $id): bool => str($id)->isUuid());
+            ->assertSessionHas('catalog.1.checkout.external_order_id', fn (string $id): bool => str($id)->isUuid());
     }
 
     public function test_checkout_only_displays_people_from_configured_business(): void
@@ -72,7 +71,7 @@ class CheckoutControllerTest extends TestCase
             'active' => true,
         ]);
 
-        $this->withSession(['cart' => [10 => 1]])
+        $this->withSession(['catalog.1.cart' => [10 => 1]])
             ->get(route('checkout.index'))
             ->assertOk()
             ->assertSee('Cliente de teste')
@@ -96,17 +95,17 @@ class CheckoutControllerTest extends TestCase
         $externalOrderId = 'cf936d6b-471d-4ef5-981e-154b825daf45';
 
         $response = $this->withSession([
-            'cart' => [10 => 2],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [10 => 2],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->post(route('checkout.store'), [
             'customer_id' => 20,
             'seller_id' => 30,
         ]);
 
         $response->assertRedirectToRoute('checkout.completed')
-            ->assertSessionMissing('cart')
-            ->assertSessionMissing('checkout.external_order_id')
-            ->assertSessionHas('checkout.completed_order', fn (array $order): bool => $order === [
+            ->assertSessionMissing('catalog.1.cart')
+            ->assertSessionMissing('catalog.1.checkout.external_order_id')
+            ->assertSessionHas('catalog.1.checkout.completed_order', fn (array $order): bool => $order === [
                 'id' => 91,
                 'number' => 'VEN-000091',
                 'total' => '99.80',
@@ -146,8 +145,8 @@ class CheckoutControllerTest extends TestCase
         $externalOrderId = '0771dd34-27df-44d5-931e-5f25fffc5664';
 
         $this->withSession([
-            'cart' => [10 => 1],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [10 => 1],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->post(route('checkout.store'))->assertRedirectToRoute('checkout.completed');
 
         Http::assertSent(fn (Request $request): bool => $request->data() === [
@@ -159,9 +158,9 @@ class CheckoutControllerTest extends TestCase
     public function test_price_change_after_cart_addition_never_sends_stale_price(): void
     {
         $this->insertProduct();
-        $checkoutResponse = $this->withSession(['cart' => [10 => 1]])
+        $checkoutResponse = $this->withSession(['catalog.1.cart' => [10 => 1]])
             ->get(route('checkout.index'));
-        $externalOrderId = session('checkout.external_order_id');
+        $externalOrderId = session('catalog.1.checkout.external_order_id');
         DB::table('products')->where('id', 10)->update(['sale_price' => '75.00']);
         Http::preventStrayRequests();
         Http::fake([
@@ -216,20 +215,20 @@ class CheckoutControllerTest extends TestCase
         $externalOrderId = 'a6ea69bf-1e21-4c7a-bce2-dcba20da478f';
 
         $failedResponse = $this->withSession([
-            'cart' => [10 => 1],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [10 => 1],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->from(route('checkout.index'))->post(route('checkout.store'));
 
         $failedResponse->assertRedirectToRoute('checkout.index')
-            ->assertSessionHas('cart', [10 => 1])
-            ->assertSessionHas('checkout.external_order_id', $externalOrderId)
+            ->assertSessionHas('catalog.1.cart', [10 => 1])
+            ->assertSessionHas('catalog.1.checkout.external_order_id', $externalOrderId)
             ->assertSessionHas('error', 'Não foi possível confirmar o pedido no Mini ERP. Tente novamente.');
 
         $successfulResponse = $this->post(route('checkout.store'));
 
         $successfulResponse->assertRedirectToRoute('checkout.completed')
-            ->assertSessionMissing('cart')
-            ->assertSessionMissing('checkout.external_order_id');
+            ->assertSessionMissing('catalog.1.cart')
+            ->assertSessionMissing('catalog.1.checkout.external_order_id');
         $sentRequests = Http::recorded();
         $this->assertSame(2, $attempt);
         $this->assertSame($externalOrderId, $acceptedPayload['external_order_id']);
@@ -258,8 +257,8 @@ class CheckoutControllerTest extends TestCase
         ]);
         $externalOrderId = '3aef3693-bb35-4d5c-8d86-2c38a20bcf47';
         $requestSession = [
-            'cart' => [10 => 2],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [10 => 2],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ];
 
         $firstResponse = $this->withSession($requestSession)->post(route('checkout.store'));
@@ -287,13 +286,13 @@ class CheckoutControllerTest extends TestCase
         $externalOrderId = 'fd33744d-87f7-49b3-b893-cc0f9e4fa3dc';
 
         $response = $this->withSession([
-            'cart' => [10 => 1],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [10 => 1],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->from(route('checkout.index'))->post(route('checkout.store'));
 
         $response->assertRedirectToRoute('checkout.index')
-            ->assertSessionHas('cart', [10 => 1])
-            ->assertSessionHas('checkout.external_order_id', $externalOrderId)
+            ->assertSessionHas('catalog.1.cart', [10 => 1])
+            ->assertSessionHas('catalog.1.checkout.external_order_id', $externalOrderId)
             ->assertSessionHas('error', $expectedMessage);
         Http::assertSentCount(1);
     }
@@ -305,16 +304,16 @@ class CheckoutControllerTest extends TestCase
         $externalOrderId = '3f269194-884d-4c85-be2c-151d92832684';
 
         $response = $this->withSession([
-            'cart' => [10 => 1],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [10 => 1],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->from(route('checkout.index'))->post(route('checkout.store'), [
             'customer_id' => 'invalid',
         ]);
 
         $response->assertRedirectToRoute('checkout.index')
             ->assertSessionHasErrors(['customer_id'])
-            ->assertSessionHas('cart', [10 => 1])
-            ->assertSessionHas('checkout.external_order_id', $externalOrderId);
+            ->assertSessionHas('catalog.1.cart', [10 => 1])
+            ->assertSessionHas('catalog.1.checkout.external_order_id', $externalOrderId);
         Http::assertNothingSent();
     }
 
@@ -325,13 +324,13 @@ class CheckoutControllerTest extends TestCase
         $externalOrderId = 'c6d89fa5-abfa-4370-a7d2-94acfccb199d';
 
         $response = $this->withSession([
-            'cart' => [10 => 1],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [10 => 1],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->from(route('checkout.index'))->post(route('checkout.store'));
 
         $response->assertRedirectToRoute('checkout.index')
-            ->assertSessionHas('cart', [10 => 1])
-            ->assertSessionHas('checkout.external_order_id', $externalOrderId)
+            ->assertSessionHas('catalog.1.cart', [10 => 1])
+            ->assertSessionHas('catalog.1.checkout.external_order_id', $externalOrderId)
             ->assertSessionHas('error', 'Um ou mais produtos do carrinho não estão disponíveis.');
         Http::assertNothingSent();
     }
@@ -342,13 +341,13 @@ class CheckoutControllerTest extends TestCase
         $externalOrderId = 'b46fcf20-1bc1-4dc4-bafd-230882a11044';
 
         $response = $this->withSession([
-            'cart' => [999999 => 1],
-            'checkout.external_order_id' => $externalOrderId,
+            'catalog.1.cart' => [999999 => 1],
+            'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->from(route('checkout.index'))->post(route('checkout.store'));
 
         $response->assertRedirectToRoute('checkout.index')
-            ->assertSessionHas('cart', [999999 => 1])
-            ->assertSessionHas('checkout.external_order_id', $externalOrderId)
+            ->assertSessionHas('catalog.1.cart', [999999 => 1])
+            ->assertSessionHas('catalog.1.checkout.external_order_id', $externalOrderId)
             ->assertSessionHas('error', 'Um ou mais produtos do carrinho não estão disponíveis.');
         Http::assertNothingSent();
     }
@@ -356,7 +355,7 @@ class CheckoutControllerTest extends TestCase
     public function test_completed_page_requires_a_confirmed_order(): void
     {
         $this->get(route('checkout.completed'))
-            ->assertRedirect('/produtos');
+            ->assertRedirectToRoute('products.index');
     }
 
     public static function erpErrorResponses(): array

@@ -32,7 +32,7 @@ class ExampleTest extends TestCase
             $table->string('photo_disk')->nullable();
         });
 
-        $response = $this->get('/');
+        $response = $this->get(route('home'));
 
         $response->assertOk()
             ->assertSee('Todos os produtos');
