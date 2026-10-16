@@ -65,4 +65,22 @@ class CartControllerTest extends TestCase
             ->assertSee('Ver produtos')
             ->assertDontSee('Finalizar pedido');
     }
+
+    public function test_product_from_another_business_cannot_be_added_to_cart(): void
+    {
+        DB::table('products')->insert([
+            'id' => 20,
+            'business_id' => 2,
+            'sku' => 'OUTRA-EMPRESA',
+            'name' => 'Produto protegido',
+            'sale_price' => '99.90',
+            'active' => true,
+        ]);
+
+        $this->from(route('products.index'))
+            ->post(route('cart.add'), ['product_id' => 20])
+            ->assertRedirectToRoute('products.index')
+            ->assertSessionHasErrors('product_id')
+            ->assertSessionMissing('cart');
+    }
 }

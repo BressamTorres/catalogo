@@ -1,0 +1,59 @@
+# Environment files and credentials
+/.env
+/.env.*
+!/.env.example
+/auth.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Version control and local tooling
+/.git
+/.github
+/.ai
+/.claude
+/.codex
+/.cursor
+/.idea
+/.vscode
+/.mcp.json
+/AGENTS.md
+/CLAUDE.md
+
+# Dependencies rebuilt during image creation
+/node_modules
+/vendor
+
+# Runtime data, uploads, logs and caches
+/public/hot
+/public/storage
+/storage/app/private/*
+!/storage/app/private/.gitignore
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/testing/*
+!/storage/framework/testing/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+/storage/logs/*
+!/storage/logs/.gitignore
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+# Tests and local reports
+/tests
+/coverage
+/.phpunit.cache
+/.phpunit.result.cache
+*.log
+
+# Local-only files
+/.DS_Store
+/README.md
+/docker-compose*.yml
+/docker-compose*.yaml
