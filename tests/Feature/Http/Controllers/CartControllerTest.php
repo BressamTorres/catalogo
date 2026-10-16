@@ -43,7 +43,7 @@ class CartControllerTest extends TestCase
         $response = $this->withSession(['catalog.1.cart' => [10 => 2]])->get(route('cart.index'));
 
         $response->assertOk()
-            ->assertSee('CATÁLOGO')
+            ->assertSee('Catálogo Teste')
             ->assertSee('Meu carrinho')
             ->assertSee('Camisa Essencial')
             ->assertSee('CAM-001')

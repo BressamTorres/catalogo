@@ -50,7 +50,7 @@ class CheckoutControllerTest extends TestCase
             ->get(route('checkout.index'));
 
         $response->assertOk()
-            ->assertSee('CATÁLOGO')
+            ->assertSee('Catálogo Teste')
             ->assertSee('Dados do pedido')
             ->assertSee('Resumo do pedido')
             ->assertSee('Confirmar pedido')

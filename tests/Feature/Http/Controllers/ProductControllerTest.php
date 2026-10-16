@@ -5,6 +5,7 @@ namespace Tests\Feature\Http\Controllers;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ProductControllerTest extends TestCase
@@ -35,17 +36,70 @@ class ProductControllerTest extends TestCase
         $response = $this->withSession(['catalog.1.cart' => [10 => 2]])->get(route('home'));
 
         $response->assertOk()
+            ->assertSee('Catálogo Teste')
+            ->assertSee('Todos os produtos')
+            ->assertSee('O que você procura?')
             ->assertSee('Camisa Essencial')
             ->assertSee('R$ 129,90')
-            ->assertSee('Comprar')
+            ->assertSee('Adicionar ao carrinho')
             ->assertSee('Imagem indisponível')
             ->assertSee('aria-label="Carrinho com 2 itens"', false)
             ->assertSee('action="'.route('cart.add').'"', false)
-            ->assertSee("submitting ? 'Buscando...' : 'Buscar'", false)
-            ->assertSee("submitting ? 'Adicionando...' : 'Comprar'", false)
-            ->assertSee('data-catalog-spacer', false)
+            ->assertSee("submitting ? 'Adicionando...' : 'Adicionar ao carrinho'", false)
+            ->assertDontSee('>Buscar</button>', false)
+            ->assertDontSee('data-catalog-spacer', false)
             ->assertDontSee('Todas categorias')
             ->assertDontSee('Calça Indisponível');
+    }
+
+    public static function productSortOrders(): array
+    {
+        return [
+            'name ascending' => ['name_asc', ['Produto A', 'Produto B', 'Produto C']],
+            'name descending' => ['name_desc', ['Produto C', 'Produto B', 'Produto A']],
+            'price ascending' => ['price_asc', ['Produto C', 'Produto A', 'Produto B']],
+            'price descending' => ['price_desc', ['Produto B', 'Produto A', 'Produto C']],
+            'unknown sort falls back safely' => ['name; DROP TABLE products', ['Produto A', 'Produto B', 'Produto C']],
+        ];
+    }
+
+    #[DataProvider('productSortOrders')]
+    public function test_catalog_sorts_products_using_only_supported_options(string $sort, array $expectedOrder): void
+    {
+        $this->insertProduct(10, 'A-001', 'Produto A', '20.00');
+        $this->insertProduct(20, 'B-001', 'Produto B', '30.00');
+        $this->insertProduct(30, 'C-001', 'Produto C', '10.00');
+
+        $response = $this->get(route('products.index', ['sort' => $sort]));
+
+        $response->assertOk()
+            ->assertSeeInOrder($expectedOrder);
+    }
+
+    public function test_relevance_prioritizes_exact_sku_name_and_prefix_matches(): void
+    {
+        $this->insertProduct(10, 'CAM', 'Produto por código', '10.00');
+        $this->insertProduct(20, 'EXATO', 'Cam', '20.00');
+        $this->insertProduct(30, 'PREFIXO', 'Camisa básica', '30.00');
+        $this->insertProduct(40, 'CONTEM', 'Minha camisa', '40.00');
+
+        $response = $this->get(route('products.index', ['search' => 'cam', 'sort' => 'relevance']));
+
+        $response->assertOk()
+            ->assertSeeInOrder(['Produto por código', 'Cam', 'Camisa básica', 'Minha camisa']);
+    }
+
+    public function test_catalog_escapes_business_name_in_header(): void
+    {
+        DB::table('businesses')->where('id', 1)->update([
+            'trade_name' => '<script>alert("catalog")</script>',
+        ]);
+
+        $response = $this->get(route('products.index'));
+
+        $response->assertOk()
+            ->assertSee('&lt;script&gt;', false)
+            ->assertDontSee('<script>alert("catalog")</script>', false);
     }
 
     public function test_search_filters_existing_products_by_name_or_sku(): void

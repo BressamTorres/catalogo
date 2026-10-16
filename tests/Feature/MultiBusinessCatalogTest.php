@@ -71,17 +71,21 @@ class MultiBusinessCatalogTest extends TestCase
     {
         $this->get(route('products.index', ['catalog' => 'empresa-alfa']))
             ->assertOk()
+            ->assertSee('Empresa Alfa')
             ->assertSee('Produto Alfa')
             ->assertSee('R$ 10,00')
             ->assertSee('https://images.example.test/businesses/1/products/produto.jpg')
+            ->assertDontSee('Empresa Beta')
             ->assertDontSee('Produto Beta')
             ->assertDontSee('R$ 20,00');
 
         $this->get(route('products.index', ['catalog' => 'empresa-beta']))
             ->assertOk()
+            ->assertSee('Empresa Beta')
             ->assertSee('Produto Beta')
             ->assertSee('R$ 20,00')
             ->assertSee('https://images.example.test/businesses/2/products/produto.jpg')
+            ->assertDontSee('Empresa Alfa')
             ->assertDontSee('Produto Alfa')
             ->assertDontSee('R$ 10,00');
     }

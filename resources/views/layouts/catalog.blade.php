@@ -11,36 +11,58 @@
 </head>
 
 @php
+    $catalogBusinessName = (string) app(\App\Services\CatalogContext::class)->business()->trade_name;
     $headerCartCount = isset($cartCount)
         ? (int) $cartCount
         : (int) collect(session(app(\App\Services\CatalogContext::class)->cartSessionKey(), []))
             ->sum(fn (mixed $quantity): int => max((int) $quantity, 0));
-    $headerSearch = request()->routeIs('home', 'products.index') ? (string) request('search', '') : '';
+    $requestedHeaderSearch = request('search');
+    $headerSearch = request()->routeIs('home', 'products.index') && is_string($requestedHeaderSearch)
+        ? $requestedHeaderSearch
+        : '';
+    $requestedHeaderSort = request('sort');
+    $headerSort = request()->routeIs('home', 'products.index') && is_string($requestedHeaderSort)
+        ? $requestedHeaderSort
+        : '';
 @endphp
 
-<body class="min-h-screen bg-stone-100 text-zinc-950 antialiased">
+<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
     <a href="#main-content"
-        class="sr-only z-50 rounded-md bg-white px-4 py-2 text-zinc-950 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+        class="sr-only z-50 rounded-md bg-white px-4 py-2 text-slate-950 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Ir para o conteúdo
     </a>
 
-    <header class="bg-zinc-950 text-white">
-        <div class="mx-auto flex max-w-[1600px] flex-wrap items-center gap-4 px-4 py-4 sm:px-6 lg:flex-nowrap lg:px-8">
+    <header class="border-b border-slate-200 bg-white">
+        <div
+            class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,42rem)_minmax(0,1fr)] lg:px-8">
             <a href="{{ route('home') }}"
-                class="order-1 inline-flex shrink-0 items-center gap-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                class="inline-flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
                 aria-label="Página inicial do catálogo">
-                <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-sm font-bold"
-                    aria-hidden="true">C</span>
-                <span class="text-base font-semibold tracking-[0.22em] sm:text-lg">CATÁLOGO</span>
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700"
+                    aria-hidden="true">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8">
+                        <path d="M4 10v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9"></path>
+                        <path d="M3 10 5.5 4h13L21 10"></path>
+                        <path d="M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"></path>
+                        <path d="M9 20v-6h6v6"></path>
+                    </svg>
+                </span>
+                <span class="truncate text-base font-semibold text-slate-900 sm:text-lg" title="{{ $catalogBusinessName }}">
+                    {{ $catalogBusinessName }}
+                </span>
             </a>
 
-            <form method="GET" action="{{ route('products.index') }}" x-data="{ submitting: false }"
-                x-on:submit="submitting = true"
-                class="order-3 w-full lg:order-2 lg:mx-auto lg:max-w-3xl lg:flex-1" role="search">
+            <form method="GET" action="{{ route('products.index') }}"
+                class="col-span-2 row-start-2 w-full lg:col-span-1 lg:col-start-2 lg:row-start-1" role="search">
                 <label for="catalog-search" class="sr-only">Pesquisar produtos por nome ou código</label>
 
+                @if ($headerSort !== '')
+                    <input type="hidden" name="sort" value="{{ $headerSort }}">
+                @endif
+
                 <div class="relative">
-                    <svg class="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500"
+                    <svg class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                         aria-hidden="true">
                         <circle cx="11" cy="11" r="7"></circle>
@@ -49,18 +71,12 @@
 
                     <input id="catalog-search" type="search" name="search" value="{{ $headerSearch }}"
                         placeholder="O que você procura?"
-                        class="h-12 w-full rounded-full border-0 bg-white py-3 pl-12 pr-28 text-sm text-zinc-950 shadow-sm outline-none placeholder:text-zinc-500 focus:ring-2 focus:ring-zinc-400 sm:h-14 sm:text-base">
-
-                    <button type="submit" x-bind:disabled="submitting"
-                        class="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:cursor-wait disabled:bg-zinc-500"
-                        x-text="submitting ? 'Buscando...' : 'Buscar'">
-                        Buscar
-                    </button>
+                        class="h-12 w-full rounded-full border border-slate-300 bg-slate-50 py-3 pl-12 pr-4 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 hover:border-slate-400 focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-200 sm:text-base">
                 </div>
             </form>
 
             <a href="{{ route('cart.index') }}"
-                class="order-2 ml-auto inline-flex min-h-11 items-center gap-3 rounded-full px-3 py-2 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white lg:order-3 lg:ml-0"
+                class="justify-self-end inline-flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 lg:col-start-3"
                 aria-label="Carrinho com {{ $headerCartCount }} {{ $headerCartCount === 1 ? 'item' : 'itens' }}">
                 <span class="relative" aria-hidden="true">
                     <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -70,7 +86,7 @@
                         <circle cx="17" cy="20" r="1"></circle>
                     </svg>
                     <span
-                        class="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[11px] font-bold text-zinc-950">
+                        class="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-700 px-1 text-[11px] font-bold text-white">
                         {{ $headerCartCount }}
                     </span>
                 </span>
@@ -79,9 +95,7 @@
         </div>
     </header>
 
-    <div class="h-[61px] border-b border-zinc-200 bg-white" data-catalog-spacer aria-hidden="true"></div>
-
-    <main id="main-content" class="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <main id="main-content" class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         @yield('content')
     </main>
 </body>
