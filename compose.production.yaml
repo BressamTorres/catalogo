@@ -1,0 +1,70 @@
+name: catalogo-production
+
+services:
+  app:
+    image: ${CATALOG_IMAGE:-catalogo:production}
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
+      target: app
+    env_file:
+      - ${CATALOG_ENV_FILE:-.env.production}
+    restart: unless-stopped
+    volumes:
+      - catalog_storage:/var/www/html/storage/app
+    networks:
+      - web
+      - data
+      - mini_erp_data
+    depends_on:
+      catalog-redis:
+        condition: service_healthy
+    expose:
+      - "9000"
+
+  nginx:
+    image: ${CATALOG_NGINX_IMAGE:-catalogo-nginx:production}
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
+      target: nginx
+    environment:
+      NGINX_HOST: ${CATALOG_DOMAIN:-_}
+    restart: unless-stopped
+    ports:
+      - "${CATALOG_HTTP_BIND:-127.0.0.1:8080}:80"
+    networks:
+      - web
+    depends_on:
+      app:
+        condition: service_healthy
+
+  catalog-redis:
+    image: redis:7-alpine
+    env_file:
+      - ${CATALOG_REDIS_ENV_FILE:-.env.redis.production}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+networks:
+  web:
+    driver: bridge
+  data:
+    driver: bridge
+    internal: true
+  mini_erp_data:
+    name: mini-erp-data
+    external: true
+
+volumes:
+  catalog_storage:
+  redis_data:
