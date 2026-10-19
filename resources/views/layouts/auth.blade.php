@@ -7,6 +7,7 @@
     <meta name="description" content="Acesse sua conta no catálogo online.">
     <title>@yield('title') | {{ app(\App\Services\CatalogContext::class)->business()->trade_name }}</title>
 
+    @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 

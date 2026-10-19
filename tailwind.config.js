@@ -1,3 +1,5 @@
+import defaultTheme from 'tailwindcss/defaultTheme';
+
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
@@ -9,6 +11,7 @@ export default {
     theme: {
         extend: {
             fontFamily: {
+                figtree: ['Figtree', ...defaultTheme.fontFamily.sans],
                 sans: [
                     'Instrument Sans',
                     'ui-sans-serif',
