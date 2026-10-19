@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests;
 
-use App\Services\CatalogContext;
+use App\Rules\Cpf;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class ConfirmCheckoutRequest extends FormRequest
 {
@@ -14,30 +14,46 @@ class ConfirmCheckoutRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $user = $this->user();
+
+        $this->merge([
+            'customer' => [
+                'name' => trim((string) $user?->name),
+                'document' => preg_replace('/\D+/', '', (string) $user?->document) ?? '',
+                'phone' => preg_replace('/\D+/', '', (string) $user?->phone) ?? '',
+                'email' => Str::lower(trim((string) $user?->email)),
+            ],
+        ]);
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        $businessId = app(CatalogContext::class)->id();
+        return [
+            'customer' => ['required', 'array:name,document,phone,email'],
+            'customer.name' => ['required', 'string', 'max:255'],
+            'customer.document' => ['bail', 'required', 'string', 'regex:/^\d{11}$/', new Cpf],
+            'customer.phone' => ['required', 'string', 'regex:/^\d{10,11}$/'],
+            'customer.email' => ['required', 'string', 'email', 'max:255'],
+        ];
+    }
+
+    /**
+     * @return array{name: string, document: string, phone: string, email: string}
+     */
+    public function customer(): array
+    {
+        $customer = $this->validated('customer');
 
         return [
-            'customer_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('erp_read.persons', 'id')
-                    ->where('business_id', $businessId)
-                    ->where('type', 'customer')
-                    ->where('active', true),
-            ],
-            'seller_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('erp_read.persons', 'id')
-                    ->where('business_id', $businessId)
-                    ->where('type', 'seller')
-                    ->where('active', true),
-            ],
+            'name' => $customer['name'],
+            'document' => $customer['document'],
+            'phone' => $customer['phone'],
+            'email' => $customer['email'],
         ];
     }
 
@@ -47,10 +63,14 @@ class ConfirmCheckoutRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'customer_id.integer' => 'O cliente selecionado é inválido.',
-            'customer_id.exists' => 'O cliente selecionado é inválido.',
-            'seller_id.integer' => 'O vendedor selecionado é inválido.',
-            'seller_id.exists' => 'O vendedor selecionado é inválido.',
+            'customer.name.required' => 'O nome da sua conta é obrigatório para finalizar o pedido.',
+            'customer.name.max' => 'O nome da sua conta deve ter no máximo 255 caracteres.',
+            'customer.document.required' => 'O CPF da sua conta é obrigatório para finalizar o pedido.',
+            'customer.document.regex' => 'O CPF da sua conta deve conter 11 dígitos.',
+            'customer.phone.required' => 'O telefone da sua conta é obrigatório para finalizar o pedido.',
+            'customer.phone.regex' => 'O telefone da sua conta deve conter 10 ou 11 dígitos.',
+            'customer.email.required' => 'O e-mail da sua conta é obrigatório para finalizar o pedido.',
+            'customer.email.email' => 'O e-mail da sua conta é inválido.',
         ];
     }
 }

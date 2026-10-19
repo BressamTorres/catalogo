@@ -47,25 +47,23 @@ class MultiBusinessCatalogTest extends TestCase
             $table->string('photo_path')->nullable();
             $table->string('photo_disk')->nullable();
         });
-        Schema::connection('erp_read')->create('persons', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('business_id');
-            $table->string('name');
-            $table->string('type');
-            $table->boolean('active')->default(true);
-        });
-
         $this->insertProduct(10, 1, 'Produto Alfa', '10.00');
         $this->insertProduct(20, 2, 'Produto Beta', '20.00');
-        DB::connection('erp_read')->table('persons')->insert([
-            ['id' => 101, 'business_id' => 1, 'name' => 'Cliente Alfa', 'type' => 'customer', 'active' => true],
-            ['id' => 102, 'business_id' => 1, 'name' => 'Vendedor Alfa', 'type' => 'seller', 'active' => true],
-            ['id' => 201, 'business_id' => 2, 'name' => 'Cliente Beta', 'type' => 'customer', 'active' => true],
-            ['id' => 202, 'business_id' => 2, 'name' => 'Vendedor Beta', 'type' => 'seller', 'active' => true],
-        ]);
 
-        $this->alphaUser = User::factory()->create(['business_id' => 1]);
-        $this->betaUser = User::factory()->create(['business_id' => 2]);
+        $this->alphaUser = User::factory()->create([
+            'business_id' => 1,
+            'name' => 'Cliente Alfa',
+            'document' => '52998224725',
+            'phone' => '11999999999',
+            'email' => 'cliente@alfa.test',
+        ]);
+        $this->betaUser = User::factory()->create([
+            'business_id' => 2,
+            'name' => 'Cliente Beta',
+            'document' => '11144477735',
+            'phone' => '44999999999',
+            'email' => 'cliente@beta.test',
+        ]);
         $this->actingAs($this->alphaUser);
     }
 
@@ -141,16 +139,24 @@ class MultiBusinessCatalogTest extends TestCase
             ->post(route('cart.add', ['catalog' => 'empresa-beta']), ['product_id' => 20]);
 
         $this->actingAs($this->alphaUser)
-            ->post(route('checkout.store', ['catalog' => 'empresa-alfa']), ['business_id' => 2])
+            ->post(route('checkout.store', ['catalog' => 'empresa-alfa']), [
+                'business_id' => 2,
+                'customer_id' => 201,
+                'seller_id' => 202,
+            ])
             ->assertRedirect(route('checkout.completed', ['catalog' => 'empresa-alfa']));
         $this->actingAs($this->betaUser)
-            ->post(route('checkout.store', ['catalog' => 'empresa-beta']), ['business_id' => 1])
+            ->post(route('checkout.store', ['catalog' => 'empresa-beta']), [
+                'business_id' => 1,
+                'customer_id' => 101,
+                'seller_id' => 102,
+            ])
             ->assertRedirect(route('checkout.completed', ['catalog' => 'empresa-beta']));
 
         $requests = Http::recorded()->pluck(0)->values();
         $this->assertCount(2, $requests);
-        $this->assertRequestUsesBusiness($requests[0], 'catalog-token', 1, 10);
-        $this->assertRequestUsesBusiness($requests[1], 'token-beta', 2, 20);
+        $this->assertRequestUsesBusiness($requests[0], 'catalog-token', 1, 10, $this->alphaUser);
+        $this->assertRequestUsesBusiness($requests[1], 'token-beta', 2, 20, $this->betaUser);
     }
 
     public function test_checkout_rejects_a_cart_with_products_from_different_businesses(): void
@@ -165,18 +171,31 @@ class MultiBusinessCatalogTest extends TestCase
         $this->assertSame([10 => 1, 20 => 1], session('catalog.1.cart'));
     }
 
-    public function test_checkout_rejects_people_from_another_business_before_calling_the_api(): void
+    public function test_checkout_ignores_people_ids_from_the_browser(): void
     {
         Http::preventStrayRequests();
+        Http::fake([
+            'http://erp.test/api/catalog/sales' => Http::response([
+                'id' => 303,
+                'number' => 'VEN-000303',
+                'total' => '10.00',
+                'created' => true,
+            ], 201),
+        ]);
         $this->post(route('cart.add', ['catalog' => 'empresa-alfa']), ['product_id' => 10]);
 
         $this->post(route('checkout.store', ['catalog' => 'empresa-alfa']), [
             'customer_id' => 201,
             'seller_id' => 202,
-        ])->assertSessionHasErrors(['customer_id', 'seller_id']);
+        ])->assertRedirect(route('checkout.completed', ['catalog' => 'empresa-alfa']));
 
-        Http::assertNothingSent();
-        $this->assertSame([10 => 1], session('catalog.1.cart'));
+        Http::assertSent(function (Request $request): bool {
+            $payload = $request->data();
+
+            return ! array_key_exists('customer_id', $payload)
+                && ! array_key_exists('seller_id', $payload)
+                && $payload['customer']['document'] === $this->alphaUser->document;
+        });
     }
 
     public function test_checkout_does_not_send_an_order_with_an_expired_business_token(): void
@@ -208,8 +227,13 @@ class MultiBusinessCatalogTest extends TestCase
         ]);
     }
 
-    private function assertRequestUsesBusiness(Request $request, string $token, int $businessId, int $productId): void
-    {
+    private function assertRequestUsesBusiness(
+        Request $request,
+        string $token,
+        int $businessId,
+        int $productId,
+        User $user,
+    ): void {
         $this->assertTrue($request->hasHeader('Authorization', "Bearer {$token}"));
         $this->assertTrue($request->hasHeader('X-Business-ID', (string) $businessId));
         $this->assertSame(
@@ -217,5 +241,13 @@ class MultiBusinessCatalogTest extends TestCase
             $request->data()['items'],
         );
         $this->assertArrayNotHasKey('business_id', $request->data());
+        $this->assertArrayNotHasKey('customer_id', $request->data());
+        $this->assertArrayNotHasKey('seller_id', $request->data());
+        $this->assertSame([
+            'name' => $user->name,
+            'document' => $user->document,
+            'phone' => $user->phone,
+            'email' => $user->email,
+        ], $request->data()['customer']);
     }
 }

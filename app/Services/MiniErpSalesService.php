@@ -17,8 +17,7 @@ class MiniErpSalesService
     /**
      * @param  array{
      *     external_order_id: string,
-     *     customer_id?: int,
-     *     seller_id?: int,
+     *     customer: array{name: string, document: string, phone: string, email: string},
      *     items: array<int, array{product_id: int, quantity: int}>
      * }  $payload
      * @return array{id: int, number: string, total: string, created: bool}
@@ -82,6 +81,15 @@ class MiniErpSalesService
 
     private function responseMessage(Response $response, string $fallback): string
     {
+        $errors = $response->json('errors');
+        $customerMessage = is_array($errors)
+            ? ($errors['customer.document'][0] ?? null)
+            : null;
+
+        if (is_string($customerMessage) && $customerMessage !== '') {
+            return $customerMessage;
+        }
+
         $message = $response->json('message');
 
         return is_string($message) && $message !== '' ? $message : $fallback;

@@ -14,12 +14,21 @@ use Tests\TestCase;
 
 class CheckoutControllerTest extends TestCase
 {
+    private User $user;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->withoutVite();
-        $this->actingAs(User::factory()->create(['business_id' => 1]));
+        $this->user = User::factory()->create([
+            'business_id' => 1,
+            'name' => 'Cliente do Catálogo',
+            'document' => '52998224725',
+            'phone' => '11999999999',
+            'email' => 'cliente@example.com',
+        ]);
+        $this->actingAs($this->user);
         config()->set('services.mini_erp', [
             'url' => 'http://erp.test',
             'credentials_key' => 'base64:dGVzdC1jYXRhbG9nLWNyZWRlbnRpYWwta2V5LTEyMzQ=',
@@ -35,13 +44,6 @@ class CheckoutControllerTest extends TestCase
             $table->decimal('sale_price', 15, 2);
             $table->boolean('active')->default(true);
         });
-        Schema::connection('erp_read')->create('persons', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('business_id')->default(1);
-            $table->string('name');
-            $table->string('type');
-            $table->boolean('active')->default(true);
-        });
     }
 
     public function test_checkout_displays_enabled_confirmation_and_keeps_external_order_id(): void
@@ -53,38 +55,35 @@ class CheckoutControllerTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Catálogo Teste')
-            ->assertSee('Dados do pedido')
+            ->assertSee('Dados do cliente')
+            ->assertSee('Cliente do Catálogo')
+            ->assertSee('52998224725')
+            ->assertSee('11999999999')
+            ->assertSee('cliente@example.com')
             ->assertSee('Resumo do pedido')
             ->assertSee('Confirmar pedido')
             ->assertSee('type="submit"', false)
+            ->assertDontSee('name="customer_id"', false)
+            ->assertDontSee('name="seller_id"', false)
             ->assertSee('x-bind:disabled="submitting"', false)
             ->assertSessionHas('catalog.1.checkout.external_order_id', fn (string $id): bool => str($id)->isUuid());
     }
 
-    public function test_checkout_only_displays_people_from_configured_business(): void
+    public function test_checkout_does_not_query_or_display_erp_people_selectors(): void
     {
         $this->insertProduct();
-        $this->insertPeople();
-        DB::connection('erp_read')->table('persons')->insert([
-            'id' => 40,
-            'business_id' => 2,
-            'name' => 'Pessoa de outra empresa',
-            'type' => 'customer',
-            'active' => true,
-        ]);
 
         $this->withSession(['catalog.1.cart' => [10 => 1]])
             ->get(route('checkout.index'))
             ->assertOk()
-            ->assertSee('Cliente de teste')
-            ->assertSee('Vendedor de teste')
-            ->assertDontSee('Pessoa de outra empresa');
+            ->assertSee('O pedido será vinculado automaticamente à sua conta.')
+            ->assertDontSee('Consumidor Final')
+            ->assertDontSee('Vendedor Padrão');
     }
 
-    public function test_confirming_order_sends_only_ids_and_quantities_then_clears_cart(): void
+    public function test_confirming_order_sends_authenticated_customer_and_ignores_browser_ids(): void
     {
         $this->insertProduct();
-        $this->insertPeople();
         Http::preventStrayRequests();
         Http::fake([
             'http://erp.test/api/catalog/sales' => Http::response([
@@ -100,8 +99,14 @@ class CheckoutControllerTest extends TestCase
             'catalog.1.cart' => [10 => 2],
             'catalog.1.checkout.external_order_id' => $externalOrderId,
         ])->post(route('checkout.store'), [
-            'customer_id' => 20,
-            'seller_id' => 30,
+            'customer_id' => 999,
+            'seller_id' => 999,
+            'customer' => [
+                'name' => 'Cliente adulterado',
+                'document' => '11144477735',
+                'phone' => '44999999999',
+                'email' => 'adulterado@example.com',
+            ],
         ]);
 
         $response->assertRedirectToRoute('checkout.completed')
@@ -119,9 +124,8 @@ class CheckoutControllerTest extends TestCase
             && $request->hasHeader('X-Business-ID', '1')
             && $request->data() === [
                 'external_order_id' => $externalOrderId,
+                'customer' => $this->customerPayload(),
                 'items' => [['product_id' => 10, 'quantity' => 2]],
-                'customer_id' => 20,
-                'seller_id' => 30,
             ]);
 
         $this->get(route('checkout.completed'))
@@ -132,7 +136,7 @@ class CheckoutControllerTest extends TestCase
             ->assertSee('Voltar ao catálogo');
     }
 
-    public function test_confirming_without_people_omits_optional_ids(): void
+    public function test_existing_customer_response_completes_without_sending_people_ids(): void
     {
         $this->insertProduct();
         Http::preventStrayRequests();
@@ -141,8 +145,8 @@ class CheckoutControllerTest extends TestCase
                 'id' => 92,
                 'number' => 'VEN-000092',
                 'total' => '49.90',
-                'created' => true,
-            ], 201),
+                'created' => false,
+            ]),
         ]);
         $externalOrderId = '0771dd34-27df-44d5-931e-5f25fffc5664';
 
@@ -153,8 +157,10 @@ class CheckoutControllerTest extends TestCase
 
         Http::assertSent(fn (Request $request): bool => $request->data() === [
             'external_order_id' => $externalOrderId,
+            'customer' => $this->customerPayload(),
             'items' => [['product_id' => 10, 'quantity' => 1]],
-        ]);
+        ] && ! array_key_exists('customer_id', $request->data())
+            && ! array_key_exists('seller_id', $request->data()));
     }
 
     public function test_price_change_after_cart_addition_never_sends_stale_price(): void
@@ -182,10 +188,35 @@ class CheckoutControllerTest extends TestCase
 
             return $payload === [
                 'external_order_id' => $externalOrderId,
+                'customer' => $this->customerPayload(),
                 'items' => [['product_id' => 10, 'quantity' => 1]],
             ] && ! array_key_exists('total', $payload)
                 && ! array_key_exists('unit_price', $payload['items'][0]);
         });
+    }
+
+    public function test_confirming_order_preserves_multiple_products_and_quantities(): void
+    {
+        $this->insertProduct();
+        $this->insertProduct(id: 11, price: '15.00');
+        Http::preventStrayRequests();
+        Http::fake([
+            'http://erp.test/api/catalog/sales' => Http::response([
+                'id' => 96,
+                'number' => 'VEN-000096',
+                'total' => '144.80',
+                'created' => true,
+            ], 201),
+        ]);
+
+        $this->withSession(['catalog.1.cart' => [10 => 2, 11 => 3]])
+            ->post(route('checkout.store'))
+            ->assertRedirectToRoute('checkout.completed');
+
+        Http::assertSent(fn (Request $request): bool => $request->data()['items'] === [
+            ['product_id' => 10, 'quantity' => 2],
+            ['product_id' => 11, 'quantity' => 3],
+        ]);
     }
 
     public function test_timeout_after_remote_acceptance_preserves_cart_and_reuses_uuid_on_retry(): void
@@ -299,21 +330,20 @@ class CheckoutControllerTest extends TestCase
         Http::assertSentCount(1);
     }
 
-    public function test_invalid_selection_does_not_call_erp_and_preserves_order(): void
+    public function test_invalid_authenticated_cpf_does_not_call_erp_and_preserves_order(): void
     {
         $this->insertProduct();
         Http::preventStrayRequests();
         $externalOrderId = '3f269194-884d-4c85-be2c-151d92832684';
+        $this->user->update(['document' => '11111111111']);
 
         $response = $this->withSession([
             'catalog.1.cart' => [10 => 1],
             'catalog.1.checkout.external_order_id' => $externalOrderId,
-        ])->from(route('checkout.index'))->post(route('checkout.store'), [
-            'customer_id' => 'invalid',
-        ]);
+        ])->from(route('checkout.index'))->post(route('checkout.store'));
 
         $response->assertRedirectToRoute('checkout.index')
-            ->assertSessionHasErrors(['customer_id'])
+            ->assertSessionHasErrors(['customer.document'])
             ->assertSessionHas('catalog.1.cart', [10 => 1])
             ->assertSessionHas('catalog.1.checkout.external_order_id', $externalOrderId);
         Http::assertNothingSent();
@@ -383,35 +413,58 @@ class CheckoutControllerTest extends TestCase
                 ['message' => 'O produto informado é inválido.'],
                 'O produto informado é inválido.',
             ],
+            '422 invalid cpf' => [
+                422,
+                [
+                    'message' => 'Os dados informados são inválidos.',
+                    'errors' => ['customer.document' => ['CPF inválido. Verifique o número informado.']],
+                ],
+                'CPF inválido. Verifique o número informado.',
+            ],
+            '422 duplicate cpf' => [
+                422,
+                [
+                    'message' => 'Os dados informados são inválidos.',
+                    'errors' => ['customer.document' => [
+                        'Existe mais de um cliente com este CPF. Corrija a duplicidade no Mini ERP antes de continuar.',
+                    ]],
+                ],
+                'Existe mais de um cliente com este CPF. Corrija a duplicidade no Mini ERP antes de continuar.',
+            ],
+            '422 inactive customer' => [
+                422,
+                [
+                    'message' => 'Os dados informados são inválidos.',
+                    'errors' => ['customer.document' => [
+                        'O cliente cadastrado com este CPF está inativo no Mini ERP.',
+                    ]],
+                ],
+                'O cliente cadastrado com este CPF está inativo no Mini ERP.',
+            ],
         ];
     }
 
-    private function insertProduct(bool $active = true): void
+    private function insertProduct(bool $active = true, int $id = 10, string $price = '49.90'): void
     {
         DB::connection('erp_read')->table('products')->insert([
-            'id' => 10,
-            'sku' => 'SKU-10',
-            'name' => 'Produto de teste',
-            'sale_price' => '49.90',
+            'id' => $id,
+            'sku' => "SKU-{$id}",
+            'name' => "Produto de teste {$id}",
+            'sale_price' => $price,
             'active' => $active,
         ]);
     }
 
-    private function insertPeople(): void
+    /**
+     * @return array{name: string, document: string, phone: string, email: string}
+     */
+    private function customerPayload(): array
     {
-        DB::connection('erp_read')->table('persons')->insert([
-            [
-                'id' => 20,
-                'name' => 'Cliente de teste',
-                'type' => 'customer',
-                'active' => true,
-            ],
-            [
-                'id' => 30,
-                'name' => 'Vendedor de teste',
-                'type' => 'seller',
-                'active' => true,
-            ],
-        ]);
+        return [
+            'name' => 'Cliente do Catálogo',
+            'document' => '52998224725',
+            'phone' => '11999999999',
+            'email' => 'cliente@example.com',
+        ];
     }
 }

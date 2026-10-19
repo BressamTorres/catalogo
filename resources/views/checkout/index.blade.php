@@ -61,44 +61,31 @@
                         </svg>
                     </span>
                     <div>
-                        <h2 id="order-data-title" class="text-lg font-semibold text-zinc-950">Dados do pedido</h2>
+                        <h2 id="order-data-title" class="text-lg font-semibold text-zinc-950">Dados do cliente</h2>
                         <p class="mt-1 text-sm text-zinc-600">
-                            Cliente e vendedor são opcionais. Os padrões do Mini ERP serão usados quando estiverem vazios.
+                            O pedido será vinculado automaticamente à sua conta.
                         </p>
                     </div>
                 </div>
 
-                <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div>
-                        <label for="customer_id" class="mb-2 block text-sm font-semibold text-zinc-800">
-                            Cliente <span class="font-normal text-zinc-500">(opcional)</span>
-                        </label>
-
-                        <div x-data="{ customerId: @js((string) old('customer_id', '')) }">
-                            <x-form-combobox id="customer_id" name="customer_id" model="customerId"
-                                :options="Js::from($customers)" placeholder="Consumidor Final" :error="$errors->has('customer_id')" />
-                        </div>
-
-                        @error('customer_id')
-                            <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
-                        @enderror
+                <dl class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Nome</dt>
+                        <dd class="mt-1 break-words text-sm font-medium text-zinc-900">{{ $customer->name }}</dd>
                     </div>
-
-                    <div>
-                        <label for="seller_id" class="mb-2 block text-sm font-semibold text-zinc-800">
-                            Vendedor <span class="font-normal text-zinc-500">(opcional)</span>
-                        </label>
-
-                        <div x-data="{ sellerId: @js((string) old('seller_id', '')) }">
-                            <x-form-combobox id="seller_id" name="seller_id" model="sellerId"
-                                :options="Js::from($sellers)" placeholder="Vendas Online" :error="$errors->has('seller_id')" />
-                        </div>
-
-                        @error('seller_id')
-                            <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
-                        @enderror
+                    <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-zinc-500">CPF</dt>
+                        <dd class="mt-1 break-words text-sm font-medium text-zinc-900">{{ $customer->document }}</dd>
                     </div>
-                </div>
+                    <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Telefone/WhatsApp</dt>
+                        <dd class="mt-1 break-words text-sm font-medium text-zinc-900">{{ $customer->phone }}</dd>
+                    </div>
+                    <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-zinc-500">E-mail</dt>
+                        <dd class="mt-1 break-words text-sm font-medium text-zinc-900">{{ $customer->email }}</dd>
+                    </div>
+                </dl>
             </section>
 
             <aside aria-label="Resumo do pedido">

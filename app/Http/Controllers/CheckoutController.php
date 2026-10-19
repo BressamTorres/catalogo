@@ -10,7 +10,6 @@ use App\Services\MiniErpSalesService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -38,33 +37,11 @@ class CheckoutController extends Controller
         }
 
         $total = $items->sum('subtotal');
-
-        $sellers = DB::connection('erp_read')->table('persons')
-            ->where('business_id', $this->catalog->id())
-            ->where('type', 'seller')
-            ->where('active', 1)
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn ($seller) => [
-                'value' => (string) $seller->id,
-                'label' => $seller->name,
-            ])
-            ->values();
-        $customers = DB::connection('erp_read')->table('persons')
-            ->where('business_id', $this->catalog->id())
-            ->where('type', 'customer')
-            ->where('active', 1)
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn ($customer) => [
-                'value' => (string) $customer->id,
-                'label' => $customer->name,
-            ])
-            ->values();
+        $customer = $request->user();
 
         $this->externalOrderId($request);
 
-        return view('checkout.index', compact('items', 'total', 'sellers', 'customers'));
+        return view('checkout.index', compact('items', 'total', 'customer'));
     }
 
     public function store(ConfirmCheckoutRequest $request): RedirectResponse
@@ -85,6 +62,7 @@ class CheckoutController extends Controller
 
         $payload = [
             'external_order_id' => $this->externalOrderId($request),
+            'customer' => $request->customer(),
             'items' => $items
                 ->map(fn (array $item): array => [
                     'product_id' => (int) $item['product']->id,
@@ -93,15 +71,6 @@ class CheckoutController extends Controller
                 ->values()
                 ->all(),
         ];
-        $validated = $request->validated();
-
-        if (isset($validated['customer_id'])) {
-            $payload['customer_id'] = (int) $validated['customer_id'];
-        }
-
-        if (isset($validated['seller_id'])) {
-            $payload['seller_id'] = (int) $validated['seller_id'];
-        }
 
         try {
             $order = $this->miniErpSales->createSale($payload);
