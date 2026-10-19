@@ -16,6 +16,13 @@
             <p class="mt-2 text-sm text-slate-600">Acesse sua conta</p>
         </div>
 
+        @if (session('status'))
+            <div class="mb-5 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800"
+                role="status">
+                {{ session('status') }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('login.store') }}" x-data="{ showPassword: false, submitting: false }"
             x-on:submit="if (submitting) { $event.preventDefault(); } else { submitting = true; }">
             @csrf

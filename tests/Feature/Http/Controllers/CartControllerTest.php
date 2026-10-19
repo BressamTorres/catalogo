@@ -2,9 +2,13 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Http\Middleware\EnsureCatalogConsumerBelongsToBusiness;
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CartControllerTest extends TestCase
@@ -29,6 +33,7 @@ class CartControllerTest extends TestCase
 
     public function test_cart_uses_catalog_identity_and_displays_complete_item_summary(): void
     {
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
         config()->set('services.mini_erp.product_photo_urls.r2_products', 'https://images.example.test');
         DB::connection('erp_read')->table('products')->insert([
             'id' => 10,
@@ -58,6 +63,8 @@ class CartControllerTest extends TestCase
 
     public function test_empty_cart_displays_empty_state_and_catalog_action(): void
     {
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
+
         $response = $this->get(route('cart.index'));
 
         $response->assertOk()
@@ -68,6 +75,7 @@ class CartControllerTest extends TestCase
 
     public function test_product_from_another_business_cannot_be_added_to_cart(): void
     {
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
         DB::connection('erp_read')->table('products')->insert([
             'id' => 20,
             'business_id' => 2,
@@ -82,5 +90,92 @@ class CartControllerTest extends TestCase
             ->assertRedirectToRoute('products.index')
             ->assertSessionHasErrors('product_id')
             ->assertSessionMissing('catalog.1.cart');
+    }
+
+    public function test_guest_cart_link_and_direct_access_redirect_to_login_with_intended_destination(): void
+    {
+        $cartUrl = route('cart.index');
+
+        $this->get(route('products.index'))
+            ->assertOk()
+            ->assertSee('href="'.$cartUrl.'"', false);
+
+        $response = $this->get($cartUrl);
+
+        $response->assertRedirectToRoute('login')
+            ->assertSessionHas('status', EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE)
+            ->assertSessionHas('url.intended', $cartUrl);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee(EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE);
+    }
+
+    #[DataProvider('guestCartMutationProvider')]
+    public function test_guest_cart_mutations_redirect_to_login_without_changing_cart(
+        string $routeName,
+        array $payload,
+    ): void {
+        $response = $this->post(route($routeName), $payload);
+
+        $response->assertRedirectToRoute('login')
+            ->assertSessionHas('status', EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE)
+            ->assertSessionMissing('catalog.1.cart');
+    }
+
+    public function test_consumer_from_another_business_cannot_access_the_cart(): void
+    {
+        DB::connection('erp_read')->table('businesses')->insert([
+            'id' => 2,
+            'trade_name' => 'Segunda Loja',
+            'catalog_slug' => 'segunda-loja',
+            'catalog_api_token' => null,
+            'catalog_api_token_expires_at' => null,
+        ]);
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
+        $cartUrl = route('cart.index', ['catalog' => 'segunda-loja']);
+
+        $response = $this->get($cartUrl);
+
+        $response->assertRedirect(route('login', ['catalog' => 'segunda-loja']))
+            ->assertSessionHas('status', EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE)
+            ->assertSessionHas('url.intended', $cartUrl);
+    }
+
+    public function test_cart_does_not_leak_between_consumer_sessions(): void
+    {
+        DB::connection('erp_read')->table('products')->insert([
+            'id' => 10,
+            'sku' => 'PRIVATE-001',
+            'name' => 'Produto do primeiro cliente',
+            'sale_price' => '49.90',
+            'active' => true,
+        ]);
+        $firstConsumer = User::factory()->create(['business_id' => 1]);
+        $secondConsumer = User::factory()->create(['business_id' => 1]);
+
+        $this->actingAs($firstConsumer)
+            ->withSession(['catalog.1.cart' => [10 => 1]])
+            ->get(route('cart.index'))
+            ->assertOk()
+            ->assertSee('Produto do primeiro cliente');
+
+        session()->invalidate();
+        Auth::forgetGuards();
+
+        $this->actingAs($secondConsumer)
+            ->get(route('cart.index'))
+            ->assertOk()
+            ->assertSee('Seu carrinho está vazio')
+            ->assertDontSee('Produto do primeiro cliente');
+    }
+
+    public static function guestCartMutationProvider(): array
+    {
+        return [
+            'add product' => ['cart.add', ['product_id' => 10]],
+            'change quantity' => ['cart.update', ['product_id' => 10, 'action' => 'increase']],
+            'remove product' => ['cart.update', ['product_id' => 10, 'action' => 'remove']],
+        ];
     }
 }

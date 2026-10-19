@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\CatalogCredentialCipher;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request;
@@ -12,6 +13,10 @@ use Tests\TestCase;
 
 class MultiBusinessCatalogTest extends TestCase
 {
+    private User $alphaUser;
+
+    private User $betaUser;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -58,6 +63,10 @@ class MultiBusinessCatalogTest extends TestCase
             ['id' => 201, 'business_id' => 2, 'name' => 'Cliente Beta', 'type' => 'customer', 'active' => true],
             ['id' => 202, 'business_id' => 2, 'name' => 'Vendedor Beta', 'type' => 'seller', 'active' => true],
         ]);
+
+        $this->alphaUser = User::factory()->create(['business_id' => 1]);
+        $this->betaUser = User::factory()->create(['business_id' => 2]);
+        $this->actingAs($this->alphaUser);
     }
 
     public function test_unknown_catalog_urls_return_404(): void
@@ -92,16 +101,20 @@ class MultiBusinessCatalogTest extends TestCase
 
     public function test_carts_are_separated_and_reject_products_from_another_business(): void
     {
-        $this->post(route('cart.add', ['catalog' => 'empresa-alfa']), ['product_id' => 10])
+        $this->actingAs($this->alphaUser)
+            ->post(route('cart.add', ['catalog' => 'empresa-alfa']), ['product_id' => 10])
             ->assertRedirect(route('products.index', ['catalog' => 'empresa-alfa']));
-        $this->post(route('cart.add', ['catalog' => 'empresa-beta']), ['product_id' => 20])
+        $this->actingAs($this->betaUser)
+            ->post(route('cart.add', ['catalog' => 'empresa-beta']), ['product_id' => 20])
             ->assertRedirect(route('products.index', ['catalog' => 'empresa-beta']));
 
-        $this->get(route('cart.index', ['catalog' => 'empresa-alfa']))
+        $this->actingAs($this->alphaUser)
+            ->get(route('cart.index', ['catalog' => 'empresa-alfa']))
             ->assertOk()
             ->assertSee('Produto Alfa')
             ->assertDontSee('Produto Beta');
-        $this->get(route('cart.index', ['catalog' => 'empresa-beta']))
+        $this->actingAs($this->betaUser)
+            ->get(route('cart.index', ['catalog' => 'empresa-beta']))
             ->assertOk()
             ->assertSee('Produto Beta')
             ->assertDontSee('Produto Alfa');
@@ -114,7 +127,7 @@ class MultiBusinessCatalogTest extends TestCase
         $this->assertSame([20 => 1], session('catalog.2.cart'));
     }
 
-    public function test_guest_orders_use_the_catalog_business_token_and_ignore_manipulated_business_id(): void
+    public function test_orders_use_the_catalog_business_token_and_ignore_manipulated_business_id(): void
     {
         Http::preventStrayRequests();
         Http::fake([
@@ -122,12 +135,16 @@ class MultiBusinessCatalogTest extends TestCase
                 ->push(['id' => 101, 'number' => 'VEN-000101', 'total' => '10.00', 'created' => true], 201)
                 ->push(['id' => 202, 'number' => 'VEN-000202', 'total' => '20.00', 'created' => true], 201),
         ]);
-        $this->post(route('cart.add', ['catalog' => 'empresa-alfa']), ['product_id' => 10]);
-        $this->post(route('cart.add', ['catalog' => 'empresa-beta']), ['product_id' => 20]);
+        $this->actingAs($this->alphaUser)
+            ->post(route('cart.add', ['catalog' => 'empresa-alfa']), ['product_id' => 10]);
+        $this->actingAs($this->betaUser)
+            ->post(route('cart.add', ['catalog' => 'empresa-beta']), ['product_id' => 20]);
 
-        $this->post(route('checkout.store', ['catalog' => 'empresa-alfa']), ['business_id' => 2])
+        $this->actingAs($this->alphaUser)
+            ->post(route('checkout.store', ['catalog' => 'empresa-alfa']), ['business_id' => 2])
             ->assertRedirect(route('checkout.completed', ['catalog' => 'empresa-alfa']));
-        $this->post(route('checkout.store', ['catalog' => 'empresa-beta']), ['business_id' => 1])
+        $this->actingAs($this->betaUser)
+            ->post(route('checkout.store', ['catalog' => 'empresa-beta']), ['business_id' => 1])
             ->assertRedirect(route('checkout.completed', ['catalog' => 'empresa-beta']));
 
         $requests = Http::recorded()->pluck(0)->values();

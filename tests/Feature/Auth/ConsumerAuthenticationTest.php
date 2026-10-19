@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Http\Middleware\EnsureCatalogConsumerBelongsToBusiness;
 use App\Models\User;
 use App\Services\CatalogContext;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,29 @@ class ConsumerAuthenticationTest extends TestCase
 
         $response->assertRedirect(route('products.index'))
             ->assertSessionHas($cartKey, [10 => 3]);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_consumer_returns_to_intended_cart_after_login(): void
+    {
+        $user = User::factory()->create([
+            'business_id' => 1,
+            'email' => 'cliente@example.com',
+            'password' => Hash::make('correct-password'),
+        ]);
+        $cartUrl = route('cart.index');
+
+        $this->get($cartUrl)
+            ->assertRedirectToRoute('login')
+            ->assertSessionHas('status', EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE)
+            ->assertSessionHas('url.intended', $cartUrl);
+
+        $response = $this->post(route('login.store'), [
+            'email' => 'cliente@example.com',
+            'password' => 'correct-password',
+        ]);
+
+        $response->assertRedirect($cartUrl);
         $this->assertAuthenticatedAs($user);
     }
 
@@ -185,7 +209,7 @@ class ConsumerAuthenticationTest extends TestCase
 
         $this->get('/catalogo-teste/criar-conta')
             ->assertOk()
-            ->assertSee('Já possui conta?')
+            ->assertSee('Já possui uma conta?')
             ->assertDontSee('id="catalog-search"', false)
             ->assertDontSee('aria-label="Carrinho com', false);
     }

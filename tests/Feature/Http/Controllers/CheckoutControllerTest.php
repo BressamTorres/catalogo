@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -18,6 +19,7 @@ class CheckoutControllerTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
         config()->set('services.mini_erp', [
             'url' => 'http://erp.test',
             'credentials_key' => 'base64:dGVzdC1jYXRhbG9nLWNyZWRlbnRpYWwta2V5LTEyMzQ=',

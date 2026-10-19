@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\RegisteredConsumerController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
+use App\Http\Middleware\EnsureCatalogConsumerBelongsToBusiness;
 use App\Http\Middleware\ResolveCatalogBusiness;
 use Illuminate\Support\Facades\Route;
 
@@ -35,21 +36,24 @@ Route::prefix('{catalog}')
             ->middleware('throttle:catalog-registration')
             ->name('register.store');
 
-        Route::post('/carrinho/adicionar', [CartController::class, 'add'])
-            ->name('cart.add');
+        Route::middleware(['auth', EnsureCatalogConsumerBelongsToBusiness::class])
+            ->group(function (): void {
+                Route::post('/carrinho/adicionar', [CartController::class, 'add'])
+                    ->name('cart.add');
 
-        Route::get('/carrinho', [CartController::class, 'index'])
-            ->name('cart.index');
+                Route::get('/carrinho', [CartController::class, 'index'])
+                    ->name('cart.index');
 
-        Route::post('/carrinho/atualizar', [CartController::class, 'update'])
-            ->name('cart.update');
+                Route::post('/carrinho/atualizar', [CartController::class, 'update'])
+                    ->name('cart.update');
 
-        Route::get('/checkout', [CheckoutController::class, 'index'])
-            ->name('checkout.index');
+                Route::get('/checkout', [CheckoutController::class, 'index'])
+                    ->name('checkout.index');
 
-        Route::post('/checkout', [CheckoutController::class, 'store'])
-            ->name('checkout.store');
+                Route::post('/checkout', [CheckoutController::class, 'store'])
+                    ->name('checkout.store');
 
-        Route::get('/pedido/concluido', [CheckoutController::class, 'completed'])
-            ->name('checkout.completed');
+                Route::get('/pedido/concluido', [CheckoutController::class, 'completed'])
+                    ->name('checkout.completed');
+            });
     });
