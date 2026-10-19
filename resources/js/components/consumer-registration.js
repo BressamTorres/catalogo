@@ -6,6 +6,8 @@ export default function registerConsumerRegistration(Alpine) {
         document: formatDocument(config.document),
         phone: formatPhone(config.phone),
         documentError: '',
+        showPassword: false,
+        showPasswordConfirmation: false,
         submitting: false,
 
         maskDocument(event) {
