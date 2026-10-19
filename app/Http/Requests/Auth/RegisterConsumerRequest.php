@@ -79,7 +79,9 @@ class RegisterConsumerRequest extends FormRequest
             'name.max' => 'O nome deve ter no máximo 255 caracteres.',
             'document.required' => 'Informe seu CPF ou CNPJ.',
             'document.regex' => 'Informe um CPF com 11 dígitos ou CNPJ com 14 caracteres.',
-            'document.unique' => 'Este CPF/CNPJ já está cadastrado neste catálogo.',
+            'document.unique' => strlen((string) $this->input('document')) === 11
+                ? 'Este CPF já está cadastrado. Faça login para continuar.'
+                : 'Este CPF/CNPJ já está cadastrado neste catálogo.',
             'phone.required' => 'Informe seu telefone ou WhatsApp.',
             'phone.regex' => 'Informe um telefone com 10 ou 11 dígitos.',
             'email.required' => 'Informe seu e-mail.',

@@ -105,19 +105,20 @@ class ConsumerRegistrationTest extends TestCase
         $this->assertDatabaseCount('users', 0, 'mysql');
     }
 
-    public function test_email_and_document_are_unique_only_inside_the_active_business(): void
+    public function test_email_is_unique_only_inside_the_active_business(): void
     {
         User::factory()->create([
             'business_id' => 1,
             'email' => 'cliente@example.com',
-            'document' => '52998224725',
+            'document' => '11144477735',
         ]);
 
-        $duplicate = $this->post('/catalogo-teste/criar-conta', $this->validPayload());
+        $duplicate = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'document' => '529.982.247-25',
+        ]));
 
         $duplicate->assertSessionHasErrors([
             'email' => 'Este e-mail já está cadastrado neste catálogo.',
-            'document' => 'Este CPF/CNPJ já está cadastrado neste catálogo.',
         ]);
 
         $this->createSecondBusiness();
@@ -130,6 +131,70 @@ class ConsumerRegistrationTest extends TestCase
             'email' => 'cliente@example.com',
             'document' => '52998224725',
         ], 'mysql');
+    }
+
+    public function test_same_cpf_with_and_without_formatting_is_rejected_inside_the_same_business(): void
+    {
+        User::factory()->create([
+            'business_id' => 1,
+            'email' => 'existing@example.com',
+            'document' => '52998224725',
+        ]);
+
+        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'email' => 'new@example.com',
+            'document' => '529.982.247-25',
+        ]));
+
+        $response->assertSessionHasErrors([
+            'document' => 'Este CPF já está cadastrado. Faça login para continuar.',
+        ]);
+        $this->assertDatabaseCount('users', 1, 'mysql');
+    }
+
+    public function test_same_cpf_can_be_registered_in_different_businesses(): void
+    {
+        User::factory()->create([
+            'business_id' => 1,
+            'email' => 'first@example.com',
+            'document' => '52998224725',
+        ]);
+        $this->createSecondBusiness();
+
+        $response = $this->post('/segunda-loja/criar-conta', $this->validPayload([
+            'email' => 'second@example.com',
+            'document' => '529.982.247-25',
+        ]));
+
+        $response->assertRedirect('/segunda-loja/produtos');
+        $this->assertDatabaseHas('users', [
+            'business_id' => 2,
+            'email' => 'second@example.com',
+            'document' => '52998224725',
+        ], 'mysql');
+        $this->assertDatabaseCount('users', 2, 'mysql');
+    }
+
+    public function test_different_cpf_can_be_registered_inside_the_same_business(): void
+    {
+        User::factory()->create([
+            'business_id' => 1,
+            'email' => 'existing@example.com',
+            'document' => '52998224725',
+        ]);
+
+        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'email' => 'new@example.com',
+            'document' => '111.444.777-35',
+        ]));
+
+        $response->assertRedirect('/catalogo-teste/produtos');
+        $this->assertDatabaseHas('users', [
+            'business_id' => 1,
+            'email' => 'new@example.com',
+            'document' => '11144477735',
+        ], 'mysql');
+        $this->assertDatabaseCount('users', 2, 'mysql');
     }
 
     /** @param array<string, mixed> $overrides */
