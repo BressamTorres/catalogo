@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterConsumerRequest;
+use App\Services\CatalogAuthenticationRedirect;
 use App\Services\CatalogContext;
 use App\Services\ConsumerRegistrationService;
 use Illuminate\Auth\Events\Registered;
@@ -16,6 +17,7 @@ class RegisteredConsumerController extends Controller
     public function __construct(
         private CatalogContext $catalog,
         private ConsumerRegistrationService $registrations,
+        private CatalogAuthenticationRedirect $redirects,
     ) {}
 
     public function create(): View|RedirectResponse
@@ -29,7 +31,7 @@ class RegisteredConsumerController extends Controller
 
     public function store(RegisterConsumerRequest $request): RedirectResponse
     {
-        $validated = $request->safe()->except(['password_confirmation']);
+        $validated = $request->safe()->only(['name', 'document', 'phone', 'email', 'password']);
         $user = $this->registrations->create(
             $this->catalog->id(),
             $validated,
@@ -39,6 +41,7 @@ class RegisteredConsumerController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return to_route('products.index')->with('success', 'Conta criada com sucesso.');
+        return redirect($this->redirects->destination($request))
+            ->with('success', 'Conta criada com sucesso.');
     }
 }

@@ -7,6 +7,8 @@
     <meta name="description" content="@yield('description', 'Catálogo de produtos disponíveis para compra.')">
     <title>@yield('title', 'Catálogo de Produtos')</title>
 
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -29,9 +31,27 @@
     if ((int) $authenticatedCatalogUser?->business_id !== app(\App\Services\CatalogContext::class)->id()) {
         $authenticatedCatalogUser = null;
     }
+
+    $submittedAuthForm = old('auth_form');
+    $initialAuthModal = $authenticatedCatalogUser === null && in_array($submittedAuthForm, ['login', 'register'], true)
+        ? $submittedAuthForm
+        : null;
+    $currentCatalogUrl = request()->getRequestUri();
+    $initialAuthReturnTo = old('return_to', $currentCatalogUrl);
+    $initialAuthStatusMessage = $initialAuthModal === 'login'
+        && $initialAuthReturnTo === route('cart.index', absolute: false)
+        ? \App\Http\Middleware\EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE
+        : '';
 @endphp
 
-<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+<body class="min-h-screen bg-slate-50 text-slate-950 antialiased"
+    x-data="authModals({
+        initialModal: @js($initialAuthModal),
+        initialReturnTo: @js($initialAuthReturnTo),
+        initialStatusMessage: @js($initialAuthStatusMessage),
+        currentUrl: @js($currentCatalogUrl),
+    })"
+    x-on:keydown.escape.window="close()">
     <a href="#main-content"
         class="sr-only z-50 rounded-md bg-white px-4 py-2 text-slate-950 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Ir para o conteúdo
@@ -132,6 +152,7 @@
                     </div>
                 @else
                     <a href="{{ route('login') }}"
+                        x-on:click.prevent="open('login', $event.currentTarget)"
                         class="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="1.8" aria-hidden="true">
@@ -141,12 +162,16 @@
                         Entrar
                     </a>
                     <a href="{{ route('register') }}"
+                        x-on:click.prevent="open('register', $event.currentTarget)"
                         class="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-violet-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
                         Criar conta
                     </a>
                 @endif
 
                 <a href="{{ route('cart.index') }}"
+                    @if ($authenticatedCatalogUser === null)
+                        x-on:click.prevent="open('login', $event.currentTarget, @js(route('cart.index', absolute: false)), @js(\App\Http\Middleware\EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE))"
+                    @endif
                     class="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-2.5 text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
                     aria-label="Carrinho com {{ $headerCartCount }} {{ $headerCartCount === 1 ? 'item' : 'itens' }}">
                     <span class="relative" aria-hidden="true">
@@ -170,6 +195,72 @@
     <main id="main-content" class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         @yield('content')
     </main>
+
+    @if ($authenticatedCatalogUser === null)
+        <div x-cloak x-show="activeModal === 'login'"
+            x-transition:enter="transition-opacity duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4 sm:p-6"
+            x-bind:aria-hidden="(activeModal !== 'login').toString()" x-on:click.self="close()">
+            <div class="flex min-h-full items-start justify-center sm:items-center" x-on:click.self="close()">
+                <div x-ref="loginDialog" role="dialog" aria-modal="true" aria-labelledby="catalog-login-modal-title"
+                    x-on:keydown.tab="trapFocus($event)"
+                    class="relative max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl sm:max-h-[calc(100dvh-3rem)]">
+                    <button type="button" x-on:click="close()"
+                        class="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600"
+                        aria-label="Fechar login">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" aria-hidden="true">
+                            <path d="m6 6 12 12M18 6 6 18"></path>
+                        </svg>
+                    </button>
+
+                    @include('auth.partials.login-card', [
+                        'isModal' => true,
+                        'idPrefix' => 'modal-login-',
+                        'showValidationErrors' => $initialAuthModal === 'login',
+                        'titleId' => 'catalog-login-modal-title',
+                    ])
+                </div>
+            </div>
+        </div>
+
+        <div x-cloak x-show="activeModal === 'register'"
+            x-transition:enter="transition-opacity duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4 sm:p-6"
+            x-bind:aria-hidden="(activeModal !== 'register').toString()" x-on:click.self="close()">
+            <div class="flex min-h-full items-start justify-center sm:items-center" x-on:click.self="close()">
+                <div x-ref="registerDialog" role="dialog" aria-modal="true"
+                    aria-labelledby="catalog-register-modal-title" x-on:keydown.tab="trapFocus($event)"
+                    class="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl sm:max-h-[calc(100dvh-3rem)]">
+                    <button type="button" x-on:click="close()"
+                        class="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600"
+                        aria-label="Fechar cadastro">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" aria-hidden="true">
+                            <path d="m6 6 12 12M18 6 6 18"></path>
+                        </svg>
+                    </button>
+
+                    @include('auth.partials.register-card', [
+                        'isModal' => true,
+                        'idPrefix' => 'modal-register-',
+                        'showValidationErrors' => $initialAuthModal === 'register',
+                        'titleId' => 'catalog-register-modal-title',
+                    ])
+                </div>
+            </div>
+        </div>
+    @endif
 </body>
 
 </html>

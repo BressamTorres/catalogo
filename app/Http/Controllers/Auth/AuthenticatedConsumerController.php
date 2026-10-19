@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginConsumerRequest;
+use App\Services\CatalogAuthenticationRedirect;
 use App\Services\CatalogContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,10 @@ use Illuminate\View\View;
 
 class AuthenticatedConsumerController extends Controller
 {
-    public function __construct(private CatalogContext $catalog) {}
+    public function __construct(
+        private CatalogContext $catalog,
+        private CatalogAuthenticationRedirect $redirects,
+    ) {}
 
     public function create(): View|RedirectResponse
     {
@@ -38,7 +42,7 @@ class AuthenticatedConsumerController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('products.index'));
+        return redirect()->intended($this->redirects->destination($request));
     }
 
     public function destroy(Request $request): RedirectResponse

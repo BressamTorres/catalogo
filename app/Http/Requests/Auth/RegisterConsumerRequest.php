@@ -51,6 +51,8 @@ class RegisterConsumerRequest extends FormRequest
                 Rule::unique(User::class, 'email')->where('business_id', $businessId),
             ],
             'password' => ['required', 'confirmed', Password::min(8)],
+            'auth_form' => ['sometimes', 'in:register'],
+            'return_to' => ['sometimes', 'nullable', 'string', 'max:2048'],
         ];
     }
 

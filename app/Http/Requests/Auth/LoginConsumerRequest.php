@@ -27,6 +27,8 @@ class LoginConsumerRequest extends FormRequest
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
             'remember' => ['sometimes', 'boolean'],
+            'auth_form' => ['sometimes', 'in:login'],
+            'return_to' => ['sometimes', 'nullable', 'string', 'max:2048'],
         ];
     }
 
