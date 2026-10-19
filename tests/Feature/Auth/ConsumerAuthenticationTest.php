@@ -87,6 +87,21 @@ class ConsumerAuthenticationTest extends TestCase
             ->assertSee('Entrar');
     }
 
+    public function test_auth_pages_do_not_render_the_store_header(): void
+    {
+        $this->get('/catalogo-teste/entrar')
+            ->assertOk()
+            ->assertSee('Ainda não possui conta?')
+            ->assertDontSee('id="catalog-search"', false)
+            ->assertDontSee('aria-label="Carrinho com', false);
+
+        $this->get('/catalogo-teste/criar-conta')
+            ->assertOk()
+            ->assertSee('Já possui conta?')
+            ->assertDontSee('id="catalog-search"', false)
+            ->assertDontSee('aria-label="Carrinho com', false);
+    }
+
     public function test_consumer_can_log_out(): void
     {
         $user = User::factory()->create(['business_id' => 1]);
