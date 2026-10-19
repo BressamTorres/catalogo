@@ -4,11 +4,8 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use App\Services\CatalogContext;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ConsumerRegistrationTest extends TestCase
@@ -23,12 +20,11 @@ class ConsumerRegistrationTest extends TestCase
             ->assertSee('Telefone/WhatsApp')
             ->assertSee('E-mail')
             ->assertSee('Confirmar senha')
-            ->assertSee('Foto');
+            ->assertDontSee('name="photo"', false);
     }
 
-    public function test_registration_creates_authenticated_consumer_with_normalized_data_and_photo(): void
+    public function test_registration_creates_authenticated_consumer_with_normalized_data(): void
     {
-        Storage::fake('consumer_photos');
         $cartKey = app(CatalogContext::class)->cartSessionKey();
 
         $response = $this->withSession([$cartKey => [10 => 2]])
@@ -37,7 +33,6 @@ class ConsumerRegistrationTest extends TestCase
                 'document' => '529.982.247-25',
                 'phone' => '(44) 99999-9999',
                 'email' => '  MARIA@EXAMPLE.COM  ',
-                'photo' => UploadedFile::fake()->image('cliente.jpg'),
             ]));
 
         $response->assertRedirect(route('products.index'))
@@ -53,8 +48,6 @@ class ConsumerRegistrationTest extends TestCase
         $this->assertSame('44999999999', $user->phone);
         $this->assertTrue(Hash::check('password123', $user->password));
         $this->assertNotSame('password123', $user->password);
-        $this->assertIsString($user->photo_path);
-        Storage::disk('consumer_photos')->assertExists($user->photo_path);
     }
 
     public function test_registration_accepts_valid_alphanumeric_cnpj(): void
@@ -110,45 +103,6 @@ class ConsumerRegistrationTest extends TestCase
             'password' => 'Informe uma senha.',
         ]);
         $this->assertDatabaseCount('users', 0, 'mysql');
-    }
-
-    #[DataProvider('allowedPhotoExtensions')]
-    public function test_registration_accepts_supported_photo_formats(string $extension): void
-    {
-        Storage::fake('consumer_photos');
-
-        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
-            'photo' => UploadedFile::fake()->image("cliente.{$extension}"),
-        ]));
-
-        $response->assertRedirect(route('products.index'));
-        $user = User::query()->firstOrFail();
-        Storage::disk('consumer_photos')->assertExists($user->photo_path);
-    }
-
-    /** @return array<string, array{string}> */
-    public static function allowedPhotoExtensions(): array
-    {
-        return [
-            'jpg' => ['jpg'],
-            'png' => ['png'],
-            'webp' => ['webp'],
-        ];
-    }
-
-    public function test_registration_rejects_photo_larger_than_five_megabytes(): void
-    {
-        Storage::fake('consumer_photos');
-
-        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
-            'photo' => UploadedFile::fake()->image('cliente.jpg')->size(5121),
-        ]));
-
-        $response->assertSessionHasErrors([
-            'photo' => 'A foto deve ter no máximo 5 MB.',
-        ]);
-        $this->assertDatabaseCount('users', 0, 'mysql');
-        Storage::disk('consumer_photos')->assertDirectoryEmpty('/');
     }
 
     public function test_email_and_document_are_unique_only_inside_the_active_business(): void

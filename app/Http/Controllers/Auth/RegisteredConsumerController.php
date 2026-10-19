@@ -29,11 +29,10 @@ class RegisteredConsumerController extends Controller
 
     public function store(RegisterConsumerRequest $request): RedirectResponse
     {
-        $validated = $request->safe()->except(['photo', 'password_confirmation']);
+        $validated = $request->safe()->except(['password_confirmation']);
         $user = $this->registrations->create(
             $this->catalog->id(),
             $validated,
-            $request->file('photo'),
         );
 
         event(new Registered($user));

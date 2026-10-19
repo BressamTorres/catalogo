@@ -29,7 +29,6 @@ RUN apt-get update \
     && docker-php-ext-enable redis \
     && rm -rf /tmp/pear /var/lib/apt/lists/* \
     && printf 'date.timezone=%s\n' "$TZ" > /usr/local/etc/php/conf.d/timezone.ini \
-    && printf 'upload_max_filesize=5M\npost_max_size=6M\n' > /usr/local/etc/php/conf.d/uploads.ini \
     && printf 'opcache.enable=1\nopcache.memory_consumption=128\nopcache.max_accelerated_files=20000\nopcache.validate_timestamps=%s\n' "$PHP_OPCACHE_VALIDATE_TIMESTAMPS" > /usr/local/etc/php/conf.d/opcache-production.ini
 
 FROM php-base AS composer-build

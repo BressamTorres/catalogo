@@ -16,7 +16,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('register.store') }}" enctype="multipart/form-data"
+        <form method="POST" action="{{ route('register.store') }}"
             class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
             x-data="consumerRegistrationForm({ document: @js(old('document', '')), phone: @js(old('phone', '')) })"
             x-on:submit="submit($event)">
@@ -81,17 +81,6 @@
                         class="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-200">
                 </div>
 
-                <div class="md:col-span-2">
-                    <label for="photo" class="mb-2 block text-sm font-semibold text-slate-800">
-                        Foto <span class="font-normal text-slate-500">(opcional)</span>
-                    </label>
-                    <input id="photo" name="photo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                        class="block w-full rounded-xl border border-slate-300 bg-white text-sm text-slate-700 file:mr-4 file:border-0 file:bg-violet-50 file:px-4 file:py-3 file:font-semibold file:text-violet-700 hover:file:bg-violet-100">
-                    <p class="mt-2 text-xs text-slate-500">PNG, JPG ou WEBP, com no máximo 5 MB.</p>
-                    @error('photo')
-                        <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
-                    @enderror
-                </div>
             </div>
 
             <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

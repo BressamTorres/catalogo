@@ -50,14 +50,6 @@ class RegisterConsumerRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class, 'email')->where('business_id', $businessId),
             ],
-            'photo' => [
-                'bail',
-                'nullable',
-                'mimes:jpg,jpeg,png,webp',
-                'extensions:jpg,jpeg,png,webp',
-                'image',
-                'max:5120',
-            ],
             'password' => ['required', 'confirmed', Password::min(8)],
         ];
     }
@@ -93,10 +85,6 @@ class RegisterConsumerRequest extends FormRequest
             'email.required' => 'Informe seu e-mail.',
             'email.email' => 'Informe um e-mail válido.',
             'email.unique' => 'Este e-mail já está cadastrado neste catálogo.',
-            'photo.mimes' => 'A foto deve estar no formato JPG, JPEG, PNG ou WEBP.',
-            'photo.extensions' => 'A foto deve estar no formato JPG, JPEG, PNG ou WEBP.',
-            'photo.image' => 'O arquivo enviado deve ser uma imagem válida.',
-            'photo.max' => 'A foto deve ter no máximo 5 MB.',
             'password.required' => 'Informe uma senha.',
             'password.confirmed' => 'A confirmação da senha não corresponde.',
             'password.min' => 'A senha deve ter pelo menos :min caracteres.',

@@ -31,8 +31,6 @@ services:
     environment:
       NGINX_HOST: ${CATALOG_DOMAIN:-_}
     restart: unless-stopped
-    volumes:
-      - catalog_storage:/var/www/html/storage/app:ro
     ports:
       - "${CATALOG_HTTP_BIND:-127.0.0.1:8080}:80"
     networks:

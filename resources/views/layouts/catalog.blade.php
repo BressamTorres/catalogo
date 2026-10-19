@@ -39,7 +39,7 @@
 
     <header class="border-b border-slate-200 bg-white">
         <div
-            class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,42rem)_minmax(0,1fr)] lg:px-8">
+            class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(12rem,1fr)_minmax(18rem,36rem)_auto] lg:gap-x-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,42rem)_auto]">
             <a href="{{ route('home') }}"
                 class="inline-flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
                 aria-label="Página inicial do catálogo">
@@ -59,7 +59,7 @@
             </a>
 
             <form method="GET" action="{{ route('products.index') }}"
-                class="col-span-2 row-start-2 w-full lg:col-span-1 lg:col-start-2 lg:row-start-1" role="search">
+                class="col-span-2 row-start-3 w-full sm:row-start-2 lg:col-span-1 lg:col-start-2 lg:row-start-1" role="search">
                 <label for="catalog-search" class="sr-only">Pesquisar produtos por nome ou código</label>
 
                 @if ($headerSort !== '')
@@ -80,32 +80,73 @@
                 </div>
             </form>
 
-            <div class="justify-self-end flex items-center gap-1 lg:col-start-3 sm:gap-2">
+            <div
+                class="col-span-2 row-start-2 flex items-center justify-end gap-2 justify-self-stretch sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-end lg:col-start-3 lg:gap-3">
                 @if ($authenticatedCatalogUser !== null)
-                    <span class="hidden max-w-32 truncate text-sm font-medium text-slate-700 xl:inline"
-                        title="{{ $authenticatedCatalogUser->name }}">
-                        {{ $authenticatedCatalogUser->name }}
-                    </span>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit"
-                            class="inline-flex min-h-11 items-center rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
-                            Sair
+                    <div class="relative" x-data="{ accountOpen: false }">
+                        <button type="button"
+                            class="inline-flex h-10 max-w-52 items-center justify-center gap-2 rounded-full border border-violet-200 bg-white px-3.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
+                            x-on:click="accountOpen = !accountOpen" x-bind:aria-expanded="accountOpen.toString()"
+                            aria-haspopup="true">
+                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.8" aria-hidden="true">
+                                <circle cx="12" cy="8" r="3.5"></circle>
+                                <path d="M5 20a7 7 0 0 1 14 0"></path>
+                            </svg>
+                            <span class="max-w-28 truncate sm:max-w-36" title="{{ $authenticatedCatalogUser->name }}">
+                                {{ $authenticatedCatalogUser->name }}
+                            </span>
+                            <svg class="h-3.5 w-3.5 shrink-0 transition" x-bind:class="accountOpen ? 'rotate-180' : ''"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                aria-hidden="true">
+                                <path d="m6 9 6 6 6-6"></path>
+                            </svg>
                         </button>
-                    </form>
+
+                        <div x-cloak x-show="accountOpen" x-on:click.outside="accountOpen = false"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="translate-y-1 opacity-0"
+                            x-transition:enter-end="translate-y-0 opacity-100"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="translate-y-0 opacity-100"
+                            x-transition:leave-end="translate-y-1 opacity-0"
+                            class="absolute right-0 z-30 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                            <div class="border-b border-slate-100 px-3 py-2.5">
+                                <p class="truncate text-sm font-semibold text-slate-900">{{ $authenticatedCatalogUser->name }}</p>
+                                <p class="mt-0.5 truncate text-xs text-slate-500">{{ $authenticatedCatalogUser->email }}</p>
+                            </div>
+                            <form method="POST" action="{{ route('logout') }}" class="mt-1">
+                                @csrf
+                                <button type="submit"
+                                    class="flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-medium text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.8" aria-hidden="true">
+                                        <path d="M10 17l5-5-5-5M15 12H3"></path>
+                                        <path d="M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"></path>
+                                    </svg>
+                                    Sair
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 @else
                     <a href="{{ route('login') }}"
-                        class="inline-flex min-h-11 items-center rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
+                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" aria-hidden="true">
+                            <path d="M10 17l5-5-5-5M15 12H3"></path>
+                            <path d="M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"></path>
+                        </svg>
                         Entrar
                     </a>
                     <a href="{{ route('register') }}"
-                        class="hidden min-h-11 items-center rounded-full bg-violet-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 sm:inline-flex">
+                        class="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-violet-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
                         Criar conta
                     </a>
                 @endif
 
                 <a href="{{ route('cart.index') }}"
-                    class="inline-flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
+                    class="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-2.5 text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
                     aria-label="Carrinho com {{ $headerCartCount }} {{ $headerCartCount === 1 ? 'item' : 'itens' }}">
                     <span class="relative" aria-hidden="true">
                         <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"
