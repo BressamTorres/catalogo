@@ -135,7 +135,7 @@
         </form>
 
         <p class="mt-5 text-center text-sm text-slate-600">
-            Já possui conta?
+            Já possui uma conta?
             <a href="{{ route('login') }}"
                 class="font-semibold text-violet-700 hover:text-violet-800 focus:outline-none focus:underline">Entrar</a>
         </p>
