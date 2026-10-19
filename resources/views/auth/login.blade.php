@@ -43,7 +43,7 @@
             <div class="mt-5">
                 <label for="remember_me" class="inline-flex cursor-pointer items-center">
                     <input id="remember_me" type="checkbox"
-                        class="auth-remember-checkbox rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500"
+                        class="form-checkbox rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500"
                         name="remember" value="1">
                     <span class="ml-2 text-sm text-slate-600">Lembrar de mim</span>
                 </label>
