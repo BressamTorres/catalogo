@@ -16,7 +16,10 @@ class ConsumerRegistrationTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Nome completo')
-            ->assertSee('CPF/CNPJ')
+            ->assertSee('>CPF</label>', false)
+            ->assertSee('maxlength="14"', false)
+            ->assertSee('inputmode="numeric"', false)
+            ->assertDontSee('CPF/CNPJ')
             ->assertSee('Telefone/WhatsApp')
             ->assertSee('E-mail')
             ->assertSee('Confirmar senha')
@@ -50,17 +53,24 @@ class ConsumerRegistrationTest extends TestCase
         $this->assertNotSame('password123', $user->password);
     }
 
-    public function test_registration_accepts_valid_alphanumeric_cnpj(): void
+    public function test_registration_rejects_numeric_and_alphanumeric_cnpj(): void
     {
-        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+        $numeric = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'document' => '12.345.678/0001-95',
+        ]));
+
+        $numeric->assertSessionHasErrors([
+            'document' => 'Informe um CPF válido.',
+        ]);
+
+        $alphanumeric = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
             'document' => '12.ABC.345/01DE-35',
         ]));
 
-        $response->assertRedirect(route('products.index'));
-        $this->assertDatabaseHas('users', [
-            'business_id' => 1,
-            'document' => '12ABC34501DE35',
-        ], 'mysql');
+        $alphanumeric->assertSessionHasErrors([
+            'document' => 'Informe um CPF válido.',
+        ]);
+        $this->assertDatabaseCount('users', 0, 'mysql');
     }
 
     public function test_registration_rejects_invalid_document_and_password_confirmation(): void
@@ -73,20 +83,28 @@ class ConsumerRegistrationTest extends TestCase
 
         $response->assertRedirect('/catalogo-teste/criar-conta')
             ->assertSessionHasErrors([
-                'document' => 'CPF inválido. Verifique o número informado.',
+                'document' => 'Informe um CPF válido.',
                 'password' => 'A confirmação da senha não corresponde.',
             ]);
         $this->assertDatabaseCount('users', 0, 'mysql');
     }
 
-    public function test_registration_rejects_cnpj_with_invalid_check_digits(): void
+    public function test_registration_rejects_incomplete_and_repeated_cpf(): void
     {
-        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
-            'document' => '12.ABC.345/01DE-34',
+        $incomplete = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'document' => '529.982.247-2',
         ]));
 
-        $response->assertSessionHasErrors([
-            'document' => 'CNPJ inválido. Verifique o número informado.',
+        $incomplete->assertSessionHasErrors([
+            'document' => 'Informe um CPF válido.',
+        ]);
+
+        $repeated = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'document' => '111.111.111-11',
+        ]));
+
+        $repeated->assertSessionHasErrors([
+            'document' => 'Informe um CPF válido.',
         ]);
         $this->assertDatabaseCount('users', 0, 'mysql');
     }
@@ -97,7 +115,7 @@ class ConsumerRegistrationTest extends TestCase
 
         $response->assertSessionHasErrors([
             'name' => 'Informe seu nome completo.',
-            'document' => 'Informe seu CPF ou CNPJ.',
+            'document' => 'Informe um CPF válido.',
             'phone' => 'Informe seu telefone ou WhatsApp.',
             'email' => 'Informe seu e-mail.',
             'password' => 'Informe uma senha.',

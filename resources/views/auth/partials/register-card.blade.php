@@ -42,12 +42,12 @@
         </div>
 
         <div>
-            <label for="{{ $idPrefix }}document" class="mb-2 block text-sm font-semibold text-slate-800">CPF/CNPJ</label>
+            <label for="{{ $idPrefix }}document" class="mb-2 block text-sm font-semibold text-slate-800">CPF</label>
             <input id="{{ $idPrefix }}document" name="document" type="text" x-ref="document" x-model="document"
-                x-on:input="maskDocument($event)" x-on:blur="validateDocument()" required maxlength="18"
-                inputmode="text" autocomplete="off" placeholder="000.000.000-00"
+                x-on:input="maskDocument($event)" x-on:blur="validateDocument()" required maxlength="14"
+                inputmode="numeric" autocomplete="off" placeholder="000.000.000-00"
                 x-bind:class="documentError ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : '{{ $showValidationErrors && $errors->has('document') ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-300 focus:border-violet-500 focus:ring-violet-200' }}'"
-                class="h-12 w-full rounded-xl border bg-white px-4 text-sm uppercase text-slate-950 outline-none transition placeholder:text-slate-400 focus:ring-2">
+                class="h-12 w-full rounded-xl border bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:ring-2">
             <p x-cloak x-show="documentError" x-text="documentError" class="mt-2 text-sm text-red-700"></p>
             @if ($showValidationErrors)
                 @error('document')

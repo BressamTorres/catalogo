@@ -10,6 +10,8 @@ final class Cpf implements ValidationRule
 {
     public const MESSAGE = 'CPF inválido. Verifique o número informado.';
 
+    public function __construct(private readonly string $message = self::MESSAGE) {}
+
     /**
      * Run the validation rule.
      *
@@ -22,7 +24,7 @@ final class Cpf implements ValidationRule
         }
 
         if (preg_match('/^(\d)\1{10}$/', $value) === 1 || ! $this->hasValidCheckDigits($value)) {
-            $fail(self::MESSAGE);
+            $fail($this->message);
         }
     }
 

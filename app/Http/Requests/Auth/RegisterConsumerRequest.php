@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
-use App\Rules\Cnpj;
 use App\Rules\Cpf;
 use App\Services\CatalogContext;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -37,9 +36,8 @@ class RegisterConsumerRequest extends FormRequest
                 'bail',
                 'required',
                 'string',
-                'regex:/^(?:\d{11}|[A-Z0-9]{12}\d{2})$/',
-                new Cpf,
-                new Cnpj,
+                'regex:/^\d{11}$/',
+                new Cpf('Informe um CPF válido.'),
                 Rule::unique(User::class, 'document')->where('business_id', $businessId),
             ],
             'phone' => ['required', 'string', 'regex:/^\d{10,11}$/'],
@@ -58,11 +56,10 @@ class RegisterConsumerRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $document = preg_replace(
-            '/[^A-Z0-9]/',
-            '',
-            Str::upper((string) $this->input('document')),
-        ) ?? '';
+        $submittedDocument = trim((string) $this->input('document'));
+        $document = preg_match('/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/', $submittedDocument) === 1
+            ? preg_replace('/\D/', '', $submittedDocument) ?? ''
+            : $submittedDocument;
         $phone = preg_replace('/\D/', '', (string) $this->input('phone')) ?? '';
 
         $this->merge([
@@ -79,11 +76,9 @@ class RegisterConsumerRequest extends FormRequest
         return [
             'name.required' => 'Informe seu nome completo.',
             'name.max' => 'O nome deve ter no máximo 255 caracteres.',
-            'document.required' => 'Informe seu CPF ou CNPJ.',
-            'document.regex' => 'Informe um CPF com 11 dígitos ou CNPJ com 14 caracteres.',
-            'document.unique' => strlen((string) $this->input('document')) === 11
-                ? 'Este CPF já está cadastrado. Faça login para continuar.'
-                : 'Este CPF/CNPJ já está cadastrado neste catálogo.',
+            'document.required' => 'Informe um CPF válido.',
+            'document.regex' => 'Informe um CPF válido.',
+            'document.unique' => 'Este CPF já está cadastrado. Faça login para continuar.',
             'phone.required' => 'Informe seu telefone ou WhatsApp.',
             'phone.regex' => 'Informe um telefone com 10 ou 11 dígitos.',
             'email.required' => 'Informe seu e-mail.',
