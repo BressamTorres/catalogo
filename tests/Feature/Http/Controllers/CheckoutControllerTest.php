@@ -62,6 +62,7 @@ class CheckoutControllerTest extends TestCase
             ->assertSee('cliente@example.com')
             ->assertSee('Resumo do pedido')
             ->assertSee('Confirmar pedido')
+            ->assertSee(asset('favicon-32x32.png'))
             ->assertSee('type="submit"', false)
             ->assertDontSee('name="customer_id"', false)
             ->assertDontSee('name="seller_id"', false)

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Acesse sua conta no catálogo online.">
     <title>@yield('title') | {{ app(\App\Services\CatalogContext::class)->business()->trade_name }}</title>
+    @include('partials.favicon')
 
     @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])

@@ -35,6 +35,7 @@ class CatalogNotFoundPageTest extends TestCase
             ->assertSee('Catálogo não encontrado')
             ->assertSee('Não encontramos um catálogo disponível neste endereço. Verifique o link informado e tente novamente.')
             ->assertSee('name="viewport"', false)
+            ->assertSee(asset('favicon-32x32.png'))
             ->assertSee('max-w-lg', false)
             ->assertSee('sm:px-12', false)
             ->assertDontSee('Laravel')

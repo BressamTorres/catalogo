@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="@yield('description', 'Catálogo de produtos disponíveis para compra.')">
     <title>@yield('title', 'Catálogo de Produtos')</title>
+    @include('partials.favicon')
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
