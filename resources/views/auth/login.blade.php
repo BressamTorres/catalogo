@@ -16,7 +16,7 @@
             <p class="mt-2 text-sm text-slate-600">Acesse sua conta</p>
         </div>
 
-        <form method="POST" action="{{ route('login.store') }}" x-data="{ submitting: false }"
+        <form method="POST" action="{{ route('login.store') }}" x-data="{ showPassword: false, submitting: false }"
             x-on:submit="if (submitting) { $event.preventDefault(); } else { submitting = true; }">
             @csrf
 
@@ -32,9 +32,28 @@
 
             <div class="mt-5">
                 <label for="password" class="mb-2 block text-sm font-semibold text-slate-800">Senha</label>
-                <input id="password" name="password" type="password" required autocomplete="current-password"
-                    placeholder="Digite sua senha"
-                    class="h-12 w-full rounded-xl border bg-white py-3 pl-4 pr-11 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:ring-2 {{ $errors->has('password') ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-300 focus:border-violet-500 focus:ring-violet-200' }}">
+                <div class="relative">
+                    <input id="password" name="password" x-bind:type="showPassword ? 'text' : 'password'" required
+                        autocomplete="current-password" placeholder="Digite sua senha"
+                        class="h-12 w-full rounded-xl border bg-white py-3 pl-4 pr-11 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:ring-2 {{ $errors->has('password') ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-300 focus:border-violet-500 focus:ring-violet-200' }}">
+                    <button type="button"
+                        class="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 transition hover:text-violet-600"
+                        x-on:click="showPassword = ! showPassword"
+                        x-bind:aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+                        x-bind:aria-pressed="showPassword" aria-controls="password">
+                        <svg x-show="! showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                            <circle cx="12" cy="12" r="2.5" stroke-width="1.8" />
+                        </svg>
+                        <svg x-cloak x-show="showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.4 10.4 0 0 1 12 4c6 0 9.5 6 9.5 6a17 17 0 0 1-2.1 2.8M6.2 6.2C3.8 8 2.5 10 2.5 10s3.5 6 9.5 6a10.4 10.4 0 0 0 3-.4" />
+                        </svg>
+                    </button>
+                </div>
                 @error('password')
                     <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
                 @enderror

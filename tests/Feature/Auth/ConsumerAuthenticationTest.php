@@ -177,6 +177,9 @@ class ConsumerAuthenticationTest extends TestCase
             ->assertSee('Ainda não possui conta?')
             ->assertSee('id="remember_me"', false)
             ->assertSeeText('Lembrar de mim')
+            ->assertSee('x-bind:type="showPassword ? \'text\' : \'password\'"', false)
+            ->assertSee('x-bind:aria-pressed="showPassword"', false)
+            ->assertSee('aria-controls="password"', false)
             ->assertDontSee('id="catalog-search"', false)
             ->assertDontSee('aria-label="Carrinho com', false);
 
