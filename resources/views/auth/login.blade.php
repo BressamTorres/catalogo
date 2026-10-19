@@ -3,15 +3,15 @@
 @section('title', 'Entrar')
 
 @section('content')
-    <div class="mx-auto max-w-lg">
+    <div class="mx-auto max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <div class="mb-7 text-center">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-violet-700">Minha conta</p>
-            <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Entrar</h1>
-            <p class="mt-2 text-sm text-slate-600">Acesse sua conta neste catálogo.</p>
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900">
+                <span class="text-violet-600">Infinit</span> Catálogo
+            </h1>
+            <p class="mt-2 text-sm text-slate-600">Acesse sua conta</p>
         </div>
 
-        <form method="POST" action="{{ route('login.store') }}"
-            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7" x-data="{ submitting: false }"
+        <form method="POST" action="{{ route('login.store') }}" x-data="{ submitting: false }"
             x-on:submit="if (submitting) { $event.preventDefault(); } else { submitting = true; }">
             @csrf
 
