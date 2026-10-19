@@ -69,6 +69,7 @@ class CartControllerTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Seu carrinho está vazio')
+            ->assertSee('Explorar produtos')
             ->assertSee('Ver produtos')
             ->assertDontSee('Finalizar pedido');
     }
