@@ -40,6 +40,15 @@
                 @enderror
             </div>
 
+            <div class="mt-5">
+                <label for="remember_me" class="inline-flex cursor-pointer items-center">
+                    <input id="remember_me" type="checkbox"
+                        class="auth-remember-checkbox rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500"
+                        name="remember" value="1">
+                    <span class="ml-2 text-sm text-slate-600">Lembrar de mim</span>
+                </label>
+            </div>
+
             <button type="submit" x-bind:disabled="submitting"
                 class="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-violet-700 px-7 py-3 text-sm font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 disabled:cursor-wait disabled:bg-violet-400"
                 x-text="submitting ? 'Entrando...' : 'Entrar'">

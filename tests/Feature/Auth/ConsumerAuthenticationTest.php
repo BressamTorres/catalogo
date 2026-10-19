@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use App\Services\CatalogContext;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -49,6 +50,88 @@ class ConsumerAuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_consumer_can_log_in_without_persistent_authentication(): void
+    {
+        User::factory()->create([
+            'business_id' => 1,
+            'email' => 'cliente@example.com',
+            'password' => Hash::make('correct-password'),
+        ]);
+        $recallerName = Auth::guard()->getRecallerName();
+
+        $response = $this->post('/catalogo-teste/entrar', [
+            'email' => 'cliente@example.com',
+            'password' => 'correct-password',
+        ]);
+
+        $response->assertRedirect('/catalogo-teste/produtos')
+            ->assertCookieMissing($recallerName);
+
+        $this->endBrowserSession();
+
+        $this->get('/catalogo-teste/entrar')->assertOk();
+        $this->assertGuest();
+    }
+
+    public function test_consumer_can_resume_authentication_with_remember_cookie(): void
+    {
+        $user = User::factory()->create([
+            'business_id' => 1,
+            'email' => 'cliente@example.com',
+            'password' => Hash::make('correct-password'),
+        ]);
+        $recallerName = Auth::guard()->getRecallerName();
+
+        $loginResponse = $this->post('/catalogo-teste/entrar', [
+            'email' => 'cliente@example.com',
+            'password' => 'correct-password',
+            'remember' => '1',
+        ]);
+        $rememberCookie = $loginResponse->getCookie($recallerName, false);
+
+        $loginResponse->assertRedirect('/catalogo-teste/produtos')
+            ->assertCookieNotExpired($recallerName);
+        $this->assertNotNull($rememberCookie);
+
+        $this->endBrowserSession();
+
+        $response = $this->withUnencryptedCookies([
+            $recallerName => $rememberCookie->getValue(),
+        ])->get('/catalogo-teste/entrar');
+
+        $response->assertRedirect('/catalogo-teste/produtos');
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_remember_cookie_does_not_authenticate_consumer_in_another_business(): void
+    {
+        $this->createSecondBusiness();
+        User::factory()->create([
+            'business_id' => 1,
+            'name' => 'Cliente da Primeira Empresa',
+            'email' => 'cliente@example.com',
+            'password' => Hash::make('correct-password'),
+        ]);
+        $recallerName = Auth::guard()->getRecallerName();
+        $loginResponse = $this->post('/catalogo-teste/entrar', [
+            'email' => 'cliente@example.com',
+            'password' => 'correct-password',
+            'remember' => '1',
+        ]);
+        $rememberCookie = $loginResponse->getCookie($recallerName, false);
+        $this->assertNotNull($rememberCookie);
+
+        $this->endBrowserSession();
+
+        $response = $this->withUnencryptedCookies([
+            $recallerName => $rememberCookie->getValue(),
+        ])->get('/segunda-loja/entrar');
+
+        $response->assertOk()
+            ->assertSeeText('Acesse sua conta')
+            ->assertDontSee('Cliente da Primeira Empresa');
+    }
+
     public function test_same_email_authenticates_the_consumer_from_the_active_business(): void
     {
         $this->createSecondBusiness();
@@ -92,6 +175,8 @@ class ConsumerAuthenticationTest extends TestCase
         $this->get('/catalogo-teste/entrar')
             ->assertOk()
             ->assertSee('Ainda não possui conta?')
+            ->assertSee('id="remember_me"', false)
+            ->assertSeeText('Lembrar de mim')
             ->assertDontSee('id="catalog-search"', false)
             ->assertDontSee('aria-label="Carrinho com', false);
 
@@ -102,14 +187,39 @@ class ConsumerAuthenticationTest extends TestCase
             ->assertDontSee('aria-label="Carrinho com', false);
     }
 
-    public function test_consumer_can_log_out(): void
+    public function test_consumer_logout_clears_session_and_persistent_authentication(): void
     {
-        $user = User::factory()->create(['business_id' => 1]);
+        $user = User::factory()->create([
+            'business_id' => 1,
+            'email' => 'cliente@example.com',
+            'password' => Hash::make('correct-password'),
+            'remember_token' => 'original-remember-token',
+        ]);
+        $recallerName = Auth::guard()->getRecallerName();
+        $loginResponse = $this->post('/catalogo-teste/entrar', [
+            'email' => 'cliente@example.com',
+            'password' => 'correct-password',
+            'remember' => '1',
+        ]);
+        $rememberCookie = $loginResponse->getCookie($recallerName, false);
+        $this->assertNotNull($rememberCookie);
 
-        $response = $this->actingAs($user)->post('/catalogo-teste/sair');
+        $this->endBrowserSession();
 
-        $response->assertRedirect(route('products.index'));
+        $response = $this->withUnencryptedCookies([
+            $recallerName => $rememberCookie->getValue(),
+        ])->post('/catalogo-teste/sair');
+
+        $response->assertRedirect(route('products.index'))
+            ->assertCookieExpired($recallerName);
         $this->assertGuest();
+        $this->assertNotSame('original-remember-token', $user->fresh()->remember_token);
+    }
+
+    private function endBrowserSession(): void
+    {
+        session()->invalidate();
+        Auth::forgetGuards();
     }
 
     private function createSecondBusiness(): void

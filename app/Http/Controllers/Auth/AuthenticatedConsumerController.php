@@ -30,7 +30,7 @@ class AuthenticatedConsumerController extends Controller
             'business_id' => $this->catalog->id(),
             'email' => $request->validated('email'),
             'password' => $request->validated('password'),
-        ])) {
+        ], $request->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'email' => 'E-mail ou senha inválidos.',
             ]);
