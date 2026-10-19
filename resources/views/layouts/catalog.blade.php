@@ -59,7 +59,7 @@
             </a>
 
             <form method="GET" action="{{ route('products.index') }}"
-                class="col-span-2 col-start-1 row-start-2 min-w-0 w-full lg:col-span-1 lg:col-start-2 lg:row-start-1"
+                class="col-span-2 col-start-1 row-start-2 min-w-0 w-full lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:w-[30rem] lg:max-w-full lg:justify-self-center xl:w-[34rem]"
                 role="search">
                 <label for="catalog-search" class="sr-only">Pesquisar produtos por nome ou código</label>
 
@@ -82,7 +82,7 @@
             </form>
 
             <div
-                class="col-start-2 row-start-1 flex shrink-0 items-center justify-end gap-2 justify-self-end whitespace-nowrap lg:col-start-3 lg:min-w-max lg:gap-3">
+                class="col-start-2 row-start-1 flex shrink-0 items-center justify-end gap-2 justify-self-end whitespace-nowrap lg:col-start-3 lg:min-w-max lg:gap-4">
                 @if ($authenticatedCatalogUser !== null)
                     <div class="relative" x-data="{ accountOpen: false }">
                         <button type="button"
