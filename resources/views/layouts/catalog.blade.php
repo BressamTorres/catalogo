@@ -39,9 +39,9 @@
 
     <header class="border-b border-slate-200 bg-white">
         <div
-            class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-6 lg:flex lg:flex-nowrap lg:gap-6 lg:px-8">
+            class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-6 lg:px-8">
             <a href="{{ route('home') }}"
-                class="inline-flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 lg:max-w-56 lg:shrink-0"
+                class="col-start-1 row-start-1 inline-flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 lg:max-w-56"
                 aria-label="Página inicial do catálogo">
                 <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700"
                     aria-hidden="true">
@@ -59,7 +59,8 @@
             </a>
 
             <form method="GET" action="{{ route('products.index') }}"
-                class="col-span-2 row-start-3 w-full sm:row-start-2 lg:min-w-0 lg:flex-1" role="search">
+                class="col-span-2 col-start-1 row-start-2 min-w-0 w-full lg:col-span-1 lg:col-start-2 lg:row-start-1"
+                role="search">
                 <label for="catalog-search" class="sr-only">Pesquisar produtos por nome ou código</label>
 
                 @if ($headerSort !== '')
@@ -81,7 +82,7 @@
             </form>
 
             <div
-                class="col-span-2 row-start-2 flex items-center justify-end gap-2 justify-self-stretch sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-end lg:min-w-max lg:shrink-0 lg:gap-3">
+                class="col-start-2 row-start-1 flex shrink-0 items-center justify-end gap-2 justify-self-end whitespace-nowrap lg:col-start-3 lg:min-w-max lg:gap-3">
                 @if ($authenticatedCatalogUser !== null)
                     <div class="relative" x-data="{ accountOpen: false }">
                         <button type="button"
