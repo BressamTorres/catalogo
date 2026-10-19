@@ -50,6 +50,12 @@
         initialReturnTo: @js($initialAuthReturnTo),
         initialStatusMessage: @js($initialAuthStatusMessage),
         currentUrl: @js($currentCatalogUrl),
+        authenticated: @js($authenticatedCatalogUser !== null),
+        cartAddUrl: @js(route('cart.add', absolute: false)),
+        cartCount: @js($headerCartCount),
+        cartLoginMessage: @js('Faça login para adicionar produtos ao carrinho.'),
+        csrfToken: @js(csrf_token()),
+        pendingCartStorageKey: @js('catalog.' . app(\App\Services\CatalogContext::class)->id() . '.pending-cart-addition'),
     })"
     x-on:keydown.escape.window="close()">
     <a href="#main-content"
@@ -173,6 +179,7 @@
                         x-on:click.prevent="open('login', $event.currentTarget, @js(route('cart.index', absolute: false)), @js(\App\Http\Middleware\EnsureCatalogConsumerBelongsToBusiness::LOGIN_MESSAGE))"
                     @endif
                     class="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-2.5 text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
+                    x-bind:aria-label="`Carrinho com ${cartCount} ${cartCount === 1 ? 'item' : 'itens'}`"
                     aria-label="Carrinho com {{ $headerCartCount }} {{ $headerCartCount === 1 ? 'item' : 'itens' }}">
                     <span class="relative" aria-hidden="true">
                         <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -183,7 +190,7 @@
                         </svg>
                         <span
                             class="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-700 px-1 text-[11px] font-bold text-white">
-                            {{ $headerCartCount }}
+                            <span x-text="cartCount">{{ $headerCartCount }}</span>
                         </span>
                     </span>
                     <span class="hidden text-sm font-medium xl:inline">Carrinho</span>
@@ -196,8 +203,7 @@
         @yield('content')
     </main>
 
-    @if ($authenticatedCatalogUser === null)
-        <div x-cloak x-show="activeModal === 'login'"
+    <div x-cloak x-show="activeModal === 'login'"
             x-transition:enter="transition-opacity duration-200"
             x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100"
@@ -227,9 +233,9 @@
                     ])
                 </div>
             </div>
-        </div>
+    </div>
 
-        <div x-cloak x-show="activeModal === 'register'"
+    <div x-cloak x-show="activeModal === 'register'"
             x-transition:enter="transition-opacity duration-200"
             x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100"
@@ -259,8 +265,7 @@
                     ])
                 </div>
             </div>
-        </div>
-    @endif
+    </div>
 </body>
 
 </html>

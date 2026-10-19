@@ -64,6 +64,30 @@ class AuthModalTest extends TestCase
             ->assertSee('name="return_to"', false);
     }
 
+    public function test_product_addition_uses_existing_auth_modals_and_pending_cart_state(): void
+    {
+        $response = $this->get(route('products.index'));
+
+        $response->assertOk()
+            ->assertSee('authenticated: false', false)
+            ->assertSee('cartAddUrl:', false)
+            ->assertSee('pendingCartStorageKey:', false)
+            ->assertSee('x-show="activeModal === \'login\'"', false)
+            ->assertSee('x-show="activeModal === \'register\'"', false);
+    }
+
+    public function test_auth_modals_remain_available_for_an_expired_authenticated_session(): void
+    {
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
+
+        $response = $this->get(route('products.index'));
+
+        $response->assertOk()
+            ->assertSee('authenticated: true', false)
+            ->assertSee('x-show="activeModal === \'login\'"', false)
+            ->assertSee('x-show="activeModal === \'register\'"', false);
+    }
+
     public function test_invalid_modal_login_returns_to_current_page_and_reopens_login(): void
     {
         $currentUrl = '/catalogo-teste/produtos?search=camisa';

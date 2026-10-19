@@ -10,6 +10,13 @@
         </div>
     @endif
 
+    <div x-cloak x-show="cartStatusMessage" x-text="cartStatusMessage"
+        class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+        role="status" aria-live="polite"></div>
+
+    <div x-cloak x-show="cartErrorMessage" x-text="cartErrorMessage"
+        class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert"></div>
+
     @if (session('error'))
         <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
             {{ session('error') }}
@@ -72,7 +79,7 @@
                         </p>
 
                         <form method="POST" action="{{ route('cart.add') }}" x-data="{ submitting: false }"
-                            x-on:submit="if (submitting) { $event.preventDefault(); } else { submitting = true; }"
+                            x-on:submit.prevent="if (!submitting) { submitting = true; addToCart($event).finally(() => submitting = false); }"
                             class="mt-auto pt-5">
                             @csrf
                             <input type="hidden" name="product_id" value="{{ $product->id }}">

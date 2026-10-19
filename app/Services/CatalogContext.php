@@ -43,6 +43,11 @@ class CatalogContext
         return "catalog.{$this->id()}.cart";
     }
 
+    public function processedCartAdditionsSessionKey(): string
+    {
+        return "catalog.{$this->id()}.processed_cart_additions";
+    }
+
     public function externalOrderSessionKey(): string
     {
         return "catalog.{$this->id()}.checkout.external_order_id";

@@ -93,6 +93,69 @@ class CartControllerTest extends TestCase
             ->assertSessionMissing('catalog.1.cart');
     }
 
+    public function test_authenticated_json_request_adds_product_and_returns_updated_count(): void
+    {
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
+        DB::connection('erp_read')->table('products')->insert([
+            'id' => 10,
+            'sku' => 'JSON-001',
+            'name' => 'Produto assíncrono',
+            'sale_price' => '49.90',
+            'active' => true,
+        ]);
+
+        $response = $this->withSession(['catalog.1.cart' => [10 => 2]])
+            ->postJson(route('cart.add'), [
+                'product_id' => 10,
+                'cart_request_id' => '11111111-1111-4111-8111-111111111111',
+            ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'message' => 'Produto adicionado ao carrinho!',
+                'cart_count' => 3,
+            ]);
+        $response->assertSessionHas('catalog.1.cart', [10 => 3])
+            ->assertSessionHas('catalog.1.processed_cart_additions', [
+                '11111111-1111-4111-8111-111111111111',
+            ]);
+    }
+
+    public function test_repeated_cart_request_id_adds_product_only_once(): void
+    {
+        $this->actingAs(User::factory()->create(['business_id' => 1]));
+        DB::connection('erp_read')->table('products')->insert([
+            'id' => 10,
+            'sku' => 'IDEMP-001',
+            'name' => 'Produto idempotente',
+            'sale_price' => '49.90',
+            'active' => true,
+        ]);
+        $payload = [
+            'product_id' => 10,
+            'cart_request_id' => '22222222-2222-4222-8222-222222222222',
+        ];
+
+        $this->postJson(route('cart.add'), $payload)->assertOk();
+        $response = $this->postJson(route('cart.add'), $payload);
+
+        $response->assertOk()
+            ->assertJsonPath('cart_count', 1)
+            ->assertSessionHas('catalog.1.cart', [10 => 1]);
+    }
+
+    public function test_guest_json_addition_returns_401_without_changing_cart(): void
+    {
+        $response = $this->postJson(route('cart.add'), [
+            'product_id' => 10,
+            'cart_request_id' => '33333333-3333-4333-8333-333333333333',
+        ]);
+
+        $response->assertUnauthorized()
+            ->assertSessionMissing('catalog.1.cart')
+            ->assertSessionMissing('catalog.1.processed_cart_additions');
+    }
+
     public function test_guest_cart_link_and_direct_access_redirect_to_login_with_intended_destination(): void
     {
         $cartUrl = route('cart.index');

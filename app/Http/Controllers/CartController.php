@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Services\CatalogContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -13,7 +14,7 @@ class CartController extends Controller
 {
     public function __construct(private CatalogContext $catalog) {}
 
-    public function add(Request $request): RedirectResponse
+    public function add(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'product_id' => [
@@ -23,6 +24,7 @@ class CartController extends Controller
                     ->where('business_id', $this->catalog->id())
                     ->where('active', true),
             ],
+            'cart_request_id' => ['nullable', 'uuid'],
         ]);
 
         $product = Product::query()
@@ -32,11 +34,34 @@ class CartController extends Controller
         $cartKey = $this->catalog->cartSessionKey();
         $cart = $request->session()->get($cartKey, []);
 
+        $requestId = $data['cart_request_id'] ?? null;
+        $processedAdditionsKey = $this->catalog->processedCartAdditionsSessionKey();
+        $processedAdditions = $request->session()->get($processedAdditionsKey, []);
+
+        if (is_string($requestId) && in_array($requestId, $processedAdditions, true)) {
+            return response()->json([
+                'message' => 'Produto adicionado ao carrinho!',
+                'cart_count' => $this->cartCount($cart),
+            ]);
+        }
+
         $id = $product->id;
 
         $cart[$id] = ($cart[$id] ?? 0) + 1;
 
         $request->session()->put($cartKey, $cart);
+
+        if (is_string($requestId)) {
+            $processedAdditions[] = $requestId;
+            $request->session()->put($processedAdditionsKey, array_slice($processedAdditions, -50));
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Produto adicionado ao carrinho!',
+                'cart_count' => $this->cartCount($cart),
+            ]);
+        }
 
         return to_route('products.index')
             ->with('success', 'Produto adicionado ao carrinho!');
@@ -113,5 +138,11 @@ class CartController extends Controller
         $request->session()->put($cartKey, $cart);
 
         return redirect()->route('cart.index');
+    }
+
+    /** @param array<int|string, mixed> $cart */
+    private function cartCount(array $cart): int
+    {
+        return collect($cart)->sum(fn (mixed $quantity): int => max((int) $quantity, 0));
     }
 }

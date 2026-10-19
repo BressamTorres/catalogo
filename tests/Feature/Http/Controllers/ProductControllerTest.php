@@ -45,6 +45,8 @@ class ProductControllerTest extends TestCase
             ->assertSee('Imagem indisponível')
             ->assertSee('aria-label="Carrinho com 2 itens"', false)
             ->assertSee('action="'.route('cart.add').'"', false)
+            ->assertSee('x-on:submit.prevent="', false)
+            ->assertSee('addToCart($event)', false)
             ->assertSee("submitting ? 'Adicionando...' : 'Adicionar ao carrinho'", false)
             ->assertDontSee('>Buscar</button>', false)
             ->assertDontSee('data-catalog-spacer', false)
