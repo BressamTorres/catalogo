@@ -1,0 +1,204 @@
+<?php
+
+namespace Tests\Feature\Auth;
+
+use App\Models\User;
+use App\Services\CatalogContext;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\TestCase;
+
+class ConsumerRegistrationTest extends TestCase
+{
+    public function test_registration_page_displays_complete_consumer_form(): void
+    {
+        $response = $this->get('/catalogo-teste/criar-conta');
+
+        $response->assertOk()
+            ->assertSee('Nome completo')
+            ->assertSee('CPF/CNPJ')
+            ->assertSee('Telefone/WhatsApp')
+            ->assertSee('E-mail')
+            ->assertSee('Confirmar senha')
+            ->assertSee('Foto');
+    }
+
+    public function test_registration_creates_authenticated_consumer_with_normalized_data_and_photo(): void
+    {
+        Storage::fake('consumer_photos');
+        $cartKey = app(CatalogContext::class)->cartSessionKey();
+
+        $response = $this->withSession([$cartKey => [10 => 2]])
+            ->post('/catalogo-teste/criar-conta', $this->validPayload([
+                'name' => '  Maria da Silva  ',
+                'document' => '529.982.247-25',
+                'phone' => '(44) 99999-9999',
+                'email' => '  MARIA@EXAMPLE.COM  ',
+                'photo' => UploadedFile::fake()->image('cliente.jpg'),
+            ]));
+
+        $response->assertRedirect(route('products.index'))
+            ->assertSessionHas('success', 'Conta criada com sucesso.')
+            ->assertSessionHas($cartKey, [10 => 2]);
+
+        $user = User::query()->where('email', 'maria@example.com')->firstOrFail();
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame(1, $user->business_id);
+        $this->assertSame('Maria da Silva', $user->name);
+        $this->assertSame('52998224725', $user->document);
+        $this->assertSame('44999999999', $user->phone);
+        $this->assertTrue(Hash::check('password123', $user->password));
+        $this->assertNotSame('password123', $user->password);
+        $this->assertIsString($user->photo_path);
+        Storage::disk('consumer_photos')->assertExists($user->photo_path);
+    }
+
+    public function test_registration_accepts_valid_alphanumeric_cnpj(): void
+    {
+        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'document' => '12.ABC.345/01DE-35',
+        ]));
+
+        $response->assertRedirect(route('products.index'));
+        $this->assertDatabaseHas('users', [
+            'business_id' => 1,
+            'document' => '12ABC34501DE35',
+        ], 'mysql');
+    }
+
+    public function test_registration_rejects_invalid_document_and_password_confirmation(): void
+    {
+        $response = $this->from('/catalogo-teste/criar-conta')
+            ->post('/catalogo-teste/criar-conta', $this->validPayload([
+                'document' => '529.982.247-24',
+                'password_confirmation' => 'different-password',
+            ]));
+
+        $response->assertRedirect('/catalogo-teste/criar-conta')
+            ->assertSessionHasErrors([
+                'document' => 'CPF inválido. Verifique o número informado.',
+                'password' => 'A confirmação da senha não corresponde.',
+            ]);
+        $this->assertDatabaseCount('users', 0, 'mysql');
+    }
+
+    public function test_registration_rejects_cnpj_with_invalid_check_digits(): void
+    {
+        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'document' => '12.ABC.345/01DE-34',
+        ]));
+
+        $response->assertSessionHasErrors([
+            'document' => 'CNPJ inválido. Verifique o número informado.',
+        ]);
+        $this->assertDatabaseCount('users', 0, 'mysql');
+    }
+
+    public function test_registration_requires_consumer_identification_and_credentials(): void
+    {
+        $response = $this->post('/catalogo-teste/criar-conta');
+
+        $response->assertSessionHasErrors([
+            'name' => 'Informe seu nome completo.',
+            'document' => 'Informe seu CPF ou CNPJ.',
+            'phone' => 'Informe seu telefone ou WhatsApp.',
+            'email' => 'Informe seu e-mail.',
+            'password' => 'Informe uma senha.',
+        ]);
+        $this->assertDatabaseCount('users', 0, 'mysql');
+    }
+
+    #[DataProvider('allowedPhotoExtensions')]
+    public function test_registration_accepts_supported_photo_formats(string $extension): void
+    {
+        Storage::fake('consumer_photos');
+
+        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'photo' => UploadedFile::fake()->image("cliente.{$extension}"),
+        ]));
+
+        $response->assertRedirect(route('products.index'));
+        $user = User::query()->firstOrFail();
+        Storage::disk('consumer_photos')->assertExists($user->photo_path);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function allowedPhotoExtensions(): array
+    {
+        return [
+            'jpg' => ['jpg'],
+            'png' => ['png'],
+            'webp' => ['webp'],
+        ];
+    }
+
+    public function test_registration_rejects_photo_larger_than_five_megabytes(): void
+    {
+        Storage::fake('consumer_photos');
+
+        $response = $this->post('/catalogo-teste/criar-conta', $this->validPayload([
+            'photo' => UploadedFile::fake()->image('cliente.jpg')->size(5121),
+        ]));
+
+        $response->assertSessionHasErrors([
+            'photo' => 'A foto deve ter no máximo 5 MB.',
+        ]);
+        $this->assertDatabaseCount('users', 0, 'mysql');
+        Storage::disk('consumer_photos')->assertDirectoryEmpty('/');
+    }
+
+    public function test_email_and_document_are_unique_only_inside_the_active_business(): void
+    {
+        User::factory()->create([
+            'business_id' => 1,
+            'email' => 'cliente@example.com',
+            'document' => '52998224725',
+        ]);
+
+        $duplicate = $this->post('/catalogo-teste/criar-conta', $this->validPayload());
+
+        $duplicate->assertSessionHasErrors([
+            'email' => 'Este e-mail já está cadastrado neste catálogo.',
+            'document' => 'Este CPF/CNPJ já está cadastrado neste catálogo.',
+        ]);
+
+        $this->createSecondBusiness();
+
+        $otherBusiness = $this->post('/segunda-loja/criar-conta', $this->validPayload());
+
+        $otherBusiness->assertRedirect('/segunda-loja/produtos');
+        $this->assertDatabaseHas('users', [
+            'business_id' => 2,
+            'email' => 'cliente@example.com',
+            'document' => '52998224725',
+        ], 'mysql');
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function validPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Cliente Catálogo',
+            'document' => '529.982.247-25',
+            'phone' => '(44) 3333-4444',
+            'email' => 'cliente@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ], $overrides);
+    }
+
+    private function createSecondBusiness(): void
+    {
+        DB::connection('erp_read')->table('businesses')->insert([
+            'id' => 2,
+            'trade_name' => 'Segunda Loja',
+            'catalog_slug' => 'segunda-loja',
+            'catalog_api_token' => null,
+            'catalog_api_token_expires_at' => null,
+        ]);
+    }
+}

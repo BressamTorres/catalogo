@@ -24,6 +24,11 @@
     $headerSort = request()->routeIs('home', 'products.index') && is_string($requestedHeaderSort)
         ? $requestedHeaderSort
         : '';
+    $authenticatedCatalogUser = auth()->user();
+
+    if ((int) $authenticatedCatalogUser?->business_id !== app(\App\Services\CatalogContext::class)->id()) {
+        $authenticatedCatalogUser = null;
+    }
 @endphp
 
 <body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
@@ -75,23 +80,48 @@
                 </div>
             </form>
 
-            <a href="{{ route('cart.index') }}"
-                class="justify-self-end inline-flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 lg:col-start-3"
-                aria-label="Carrinho com {{ $headerCartCount }} {{ $headerCartCount === 1 ? 'item' : 'itens' }}">
-                <span class="relative" aria-hidden="true">
-                    <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.7">
-                        <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L20.5 7H6"></path>
-                        <circle cx="10" cy="20" r="1"></circle>
-                        <circle cx="17" cy="20" r="1"></circle>
-                    </svg>
-                    <span
-                        class="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-700 px-1 text-[11px] font-bold text-white">
-                        {{ $headerCartCount }}
+            <div class="justify-self-end flex items-center gap-1 lg:col-start-3 sm:gap-2">
+                @if ($authenticatedCatalogUser !== null)
+                    <span class="hidden max-w-32 truncate text-sm font-medium text-slate-700 xl:inline"
+                        title="{{ $authenticatedCatalogUser->name }}">
+                        {{ $authenticatedCatalogUser->name }}
                     </span>
-                </span>
-                <span class="hidden text-sm font-medium sm:inline">Carrinho</span>
-            </a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit"
+                            class="inline-flex min-h-11 items-center rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
+                            Sair
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}"
+                        class="inline-flex min-h-11 items-center rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
+                        Entrar
+                    </a>
+                    <a href="{{ route('register') }}"
+                        class="hidden min-h-11 items-center rounded-full bg-violet-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 sm:inline-flex">
+                        Criar conta
+                    </a>
+                @endif
+
+                <a href="{{ route('cart.index') }}"
+                    class="inline-flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2"
+                    aria-label="Carrinho com {{ $headerCartCount }} {{ $headerCartCount === 1 ? 'item' : 'itens' }}">
+                    <span class="relative" aria-hidden="true">
+                        <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.7">
+                            <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L20.5 7H6"></path>
+                            <circle cx="10" cy="20" r="1"></circle>
+                            <circle cx="17" cy="20" r="1"></circle>
+                        </svg>
+                        <span
+                            class="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-700 px-1 text-[11px] font-bold text-white">
+                            {{ $headerCartCount }}
+                        </span>
+                    </span>
+                    <span class="hidden text-sm font-medium xl:inline">Carrinho</span>
+                </a>
+            </div>
         </div>
     </header>
 

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedConsumerController;
+use App\Http\Controllers\Auth\RegisteredConsumerController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
@@ -17,6 +19,21 @@ Route::prefix('{catalog}')
 
         Route::get('/produtos', [ProductController::class, 'index'])
             ->name('products.index');
+
+        Route::get('/entrar', [AuthenticatedConsumerController::class, 'create'])
+            ->name('login');
+        Route::post('/entrar', [AuthenticatedConsumerController::class, 'store'])
+            ->middleware('throttle:catalog-login')
+            ->name('login.store');
+        Route::post('/sair', [AuthenticatedConsumerController::class, 'destroy'])
+            ->middleware('auth')
+            ->name('logout');
+
+        Route::get('/criar-conta', [RegisteredConsumerController::class, 'create'])
+            ->name('register');
+        Route::post('/criar-conta', [RegisteredConsumerController::class, 'store'])
+            ->middleware('throttle:catalog-registration')
+            ->name('register.store');
 
         Route::post('/carrinho/adicionar', [CartController::class, 'add'])
             ->name('cart.add');

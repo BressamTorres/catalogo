@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Business;
 use App\Models\User;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -12,16 +11,6 @@ class DatabaseConnectionsTest extends TestCase
 {
     public function test_erp_records_and_catalog_users_use_separate_connections(): void
     {
-        Schema::connection('mysql')->create('users', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
-        });
-
         $user = User::factory()->create(['email' => 'catalogo@example.test']);
         $business = Business::query()->findOrFail(1);
 

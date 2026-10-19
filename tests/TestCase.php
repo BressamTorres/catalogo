@@ -53,6 +53,24 @@ abstract class TestCase extends BaseTestCase
             });
         }
 
+        if (! Schema::connection('mysql')->hasTable('users')) {
+            Schema::connection('mysql')->create('users', function (Blueprint $table): void {
+                $table->id();
+                $table->unsignedBigInteger('business_id')->nullable();
+                $table->string('name');
+                $table->string('document', 14)->nullable();
+                $table->string('phone', 11)->nullable();
+                $table->string('photo_path')->nullable();
+                $table->string('email');
+                $table->timestamp('email_verified_at')->nullable();
+                $table->string('password');
+                $table->rememberToken();
+                $table->timestamps();
+                $table->unique(['business_id', 'email']);
+                $table->unique(['business_id', 'document']);
+            });
+        }
+
         DB::connection('erp_read')->table('businesses')->insert([
             'id' => 1,
             'trade_name' => 'Catálogo Teste',

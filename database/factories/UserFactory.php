@@ -25,9 +25,13 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'business_id' => 1,
             'name' => fake()->name(),
+            'document' => $this->validCpf(),
+            'phone' => fake()->numerify('###########'),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
+            'photo_path' => null,
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
@@ -41,5 +45,25 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    private function validCpf(): string
+    {
+        do {
+            $cpf = fake()->numerify('#########');
+        } while (preg_match('/^(\d)\1{8}$/', $cpf) === 1);
+
+        for ($checkDigitIndex = 9; $checkDigitIndex <= 10; $checkDigitIndex++) {
+            $sum = 0;
+
+            for ($digitIndex = 0; $digitIndex < $checkDigitIndex; $digitIndex++) {
+                $sum += (int) $cpf[$digitIndex] * (($checkDigitIndex + 1) - $digitIndex);
+            }
+
+            $remainder = $sum % 11;
+            $cpf .= (string) ($remainder < 2 ? 0 : 11 - $remainder);
+        }
+
+        return $cpf;
     }
 }

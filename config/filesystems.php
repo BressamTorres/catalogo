@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        'consumer_photos' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/catalog-consumers'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage/catalog-consumers',
+            'visibility' => 'public',
+            'throw' => true,
+            'report' => true,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
