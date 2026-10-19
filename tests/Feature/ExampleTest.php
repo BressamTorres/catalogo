@@ -21,7 +21,7 @@ class ExampleTest extends TestCase
     {
         $this->withoutVite();
 
-        Schema::create('products', function (Blueprint $table): void {
+        Schema::connection('erp_read')->create('products', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('business_id')->default(1);
             $table->string('sku');

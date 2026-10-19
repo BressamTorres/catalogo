@@ -18,15 +18,33 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        $inMemoryConnection = config('database.connections.sqlite');
+
+        if (! is_array($inMemoryConnection)) {
+            throw new RuntimeException('A conexão SQLite de testes não está configurada.');
+        }
+
+        $inMemoryConnection['database'] = ':memory:';
+        config()->set([
+            'database.connections.mysql' => $inMemoryConnection,
+            'database.connections.erp_read' => $inMemoryConnection,
+        ]);
+        DB::purge('mysql');
+        DB::purge('erp_read');
+
         if (
             config('database.default') !== 'sqlite'
             || config('database.connections.sqlite.database') !== ':memory:'
+            || config('database.connections.mysql.driver') !== 'sqlite'
+            || config('database.connections.mysql.database') !== ':memory:'
+            || config('database.connections.erp_read.driver') !== 'sqlite'
+            || config('database.connections.erp_read.database') !== ':memory:'
         ) {
             throw new RuntimeException('Os testes devem utilizar exclusivamente SQLite em memória.');
         }
 
-        if (! Schema::hasTable('businesses')) {
-            Schema::create('businesses', function (Blueprint $table): void {
+        if (! Schema::connection('erp_read')->hasTable('businesses')) {
+            Schema::connection('erp_read')->create('businesses', function (Blueprint $table): void {
                 $table->id();
                 $table->string('trade_name');
                 $table->string('catalog_slug')->unique();
@@ -35,7 +53,7 @@ abstract class TestCase extends BaseTestCase
             });
         }
 
-        DB::table('businesses')->insert([
+        DB::connection('erp_read')->table('businesses')->insert([
             'id' => 1,
             'trade_name' => 'Catálogo Teste',
             'catalog_slug' => 'catalogo-teste',

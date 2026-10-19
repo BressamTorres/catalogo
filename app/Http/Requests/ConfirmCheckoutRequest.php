@@ -25,7 +25,7 @@ class ConfirmCheckoutRequest extends FormRequest
             'customer_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('persons', 'id')
+                Rule::exists('erp_read.persons', 'id')
                     ->where('business_id', $businessId)
                     ->where('type', 'customer')
                     ->where('active', true),
@@ -33,7 +33,7 @@ class ConfirmCheckoutRequest extends FormRequest
             'seller_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('persons', 'id')
+                Rule::exists('erp_read.persons', 'id')
                     ->where('business_id', $businessId)
                     ->where('type', 'seller')
                     ->where('active', true),

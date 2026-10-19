@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    protected $connection = 'erp_read';
+
     protected $table = 'products';
 
     protected $casts = [

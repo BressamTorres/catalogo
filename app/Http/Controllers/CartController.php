@@ -19,7 +19,7 @@ class CartController extends Controller
             'product_id' => [
                 'required',
                 'integer',
-                Rule::exists('products', 'id')
+                Rule::exists(Product::class, 'id')
                     ->where('business_id', $this->catalog->id())
                     ->where('active', true),
             ],

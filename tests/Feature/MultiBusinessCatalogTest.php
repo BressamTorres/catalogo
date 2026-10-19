@@ -20,11 +20,11 @@ class MultiBusinessCatalogTest extends TestCase
         config()->set('services.mini_erp.url', 'http://erp.test');
         config()->set('services.mini_erp.product_photo_urls.r2_products', 'https://images.example.test');
 
-        DB::table('businesses')->where('id', 1)->update([
+        DB::connection('erp_read')->table('businesses')->where('id', 1)->update([
             'trade_name' => 'Empresa Alfa',
             'catalog_slug' => 'empresa-alfa',
         ]);
-        DB::table('businesses')->insert([
+        DB::connection('erp_read')->table('businesses')->insert([
             'id' => 2,
             'trade_name' => 'Empresa Beta',
             'catalog_slug' => 'empresa-beta',
@@ -32,7 +32,7 @@ class MultiBusinessCatalogTest extends TestCase
             'catalog_api_token_expires_at' => now()->addDay(),
         ]);
 
-        Schema::create('products', function (Blueprint $table): void {
+        Schema::connection('erp_read')->create('products', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('business_id');
             $table->string('sku');
@@ -42,7 +42,7 @@ class MultiBusinessCatalogTest extends TestCase
             $table->string('photo_path')->nullable();
             $table->string('photo_disk')->nullable();
         });
-        Schema::create('persons', function (Blueprint $table): void {
+        Schema::connection('erp_read')->create('persons', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('business_id');
             $table->string('name');
@@ -52,7 +52,7 @@ class MultiBusinessCatalogTest extends TestCase
 
         $this->insertProduct(10, 1, 'Produto Alfa', '10.00');
         $this->insertProduct(20, 2, 'Produto Beta', '20.00');
-        DB::table('persons')->insert([
+        DB::connection('erp_read')->table('persons')->insert([
             ['id' => 101, 'business_id' => 1, 'name' => 'Cliente Alfa', 'type' => 'customer', 'active' => true],
             ['id' => 102, 'business_id' => 1, 'name' => 'Vendedor Alfa', 'type' => 'seller', 'active' => true],
             ['id' => 201, 'business_id' => 2, 'name' => 'Cliente Beta', 'type' => 'customer', 'active' => true],
@@ -164,7 +164,7 @@ class MultiBusinessCatalogTest extends TestCase
 
     public function test_checkout_does_not_send_an_order_with_an_expired_business_token(): void
     {
-        DB::table('businesses')->where('id', 1)->update([
+        DB::connection('erp_read')->table('businesses')->where('id', 1)->update([
             'catalog_api_token_expires_at' => now()->subMinute(),
         ]);
         Http::preventStrayRequests();
@@ -179,7 +179,7 @@ class MultiBusinessCatalogTest extends TestCase
 
     private function insertProduct(int $id, int $businessId, string $name, string $price): void
     {
-        DB::table('products')->insert([
+        DB::connection('erp_read')->table('products')->insert([
             'id' => $id,
             'business_id' => $businessId,
             'sku' => "SKU-{$id}",

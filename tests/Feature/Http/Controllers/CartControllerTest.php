@@ -15,7 +15,7 @@ class CartControllerTest extends TestCase
 
         $this->withoutVite();
 
-        Schema::create('products', function (Blueprint $table): void {
+        Schema::connection('erp_read')->create('products', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('business_id')->default(1);
             $table->string('sku');
@@ -30,7 +30,7 @@ class CartControllerTest extends TestCase
     public function test_cart_uses_catalog_identity_and_displays_complete_item_summary(): void
     {
         config()->set('services.mini_erp.product_photo_urls.r2_products', 'https://images.example.test');
-        DB::table('products')->insert([
+        DB::connection('erp_read')->table('products')->insert([
             'id' => 10,
             'sku' => 'CAM-001',
             'name' => 'Camisa Essencial',
@@ -68,7 +68,7 @@ class CartControllerTest extends TestCase
 
     public function test_product_from_another_business_cannot_be_added_to_cart(): void
     {
-        DB::table('products')->insert([
+        DB::connection('erp_read')->table('products')->insert([
             'id' => 20,
             'business_id' => 2,
             'sku' => 'OUTRA-EMPRESA',

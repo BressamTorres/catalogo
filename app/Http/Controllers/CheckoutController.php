@@ -39,7 +39,7 @@ class CheckoutController extends Controller
 
         $total = $items->sum('subtotal');
 
-        $sellers = DB::table('persons')
+        $sellers = DB::connection('erp_read')->table('persons')
             ->where('business_id', $this->catalog->id())
             ->where('type', 'seller')
             ->where('active', 1)
@@ -50,7 +50,7 @@ class CheckoutController extends Controller
                 'label' => $seller->name,
             ])
             ->values();
-        $customers = DB::table('persons')
+        $customers = DB::connection('erp_read')->table('persons')
             ->where('business_id', $this->catalog->id())
             ->where('type', 'customer')
             ->where('active', 1)

@@ -25,7 +25,7 @@ class CheckoutControllerTest extends TestCase
             'connect_timeout' => 3,
         ]);
 
-        Schema::create('products', function (Blueprint $table): void {
+        Schema::connection('erp_read')->create('products', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('business_id')->default(1);
             $table->string('sku');
@@ -33,7 +33,7 @@ class CheckoutControllerTest extends TestCase
             $table->decimal('sale_price', 15, 2);
             $table->boolean('active')->default(true);
         });
-        Schema::create('persons', function (Blueprint $table): void {
+        Schema::connection('erp_read')->create('persons', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('business_id')->default(1);
             $table->string('name');
@@ -63,7 +63,7 @@ class CheckoutControllerTest extends TestCase
     {
         $this->insertProduct();
         $this->insertPeople();
-        DB::table('persons')->insert([
+        DB::connection('erp_read')->table('persons')->insert([
             'id' => 40,
             'business_id' => 2,
             'name' => 'Pessoa de outra empresa',
@@ -161,7 +161,7 @@ class CheckoutControllerTest extends TestCase
         $checkoutResponse = $this->withSession(['catalog.1.cart' => [10 => 1]])
             ->get(route('checkout.index'));
         $externalOrderId = session('catalog.1.checkout.external_order_id');
-        DB::table('products')->where('id', 10)->update(['sale_price' => '75.00']);
+        DB::connection('erp_read')->table('products')->where('id', 10)->update(['sale_price' => '75.00']);
         Http::preventStrayRequests();
         Http::fake([
             'http://erp.test/api/catalog/sales' => Http::response([
@@ -386,7 +386,7 @@ class CheckoutControllerTest extends TestCase
 
     private function insertProduct(bool $active = true): void
     {
-        DB::table('products')->insert([
+        DB::connection('erp_read')->table('products')->insert([
             'id' => 10,
             'sku' => 'SKU-10',
             'name' => 'Produto de teste',
@@ -397,7 +397,7 @@ class CheckoutControllerTest extends TestCase
 
     private function insertPeople(): void
     {
-        DB::table('persons')->insert([
+        DB::connection('erp_read')->table('persons')->insert([
             [
                 'id' => 20,
                 'name' => 'Cliente de teste',

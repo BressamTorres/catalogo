@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 #[Hidden(['catalog_api_token'])]
 class Business extends Model
 {
+    protected $connection = 'erp_read';
+
     protected $table = 'businesses';
 
     /** @return array<string, string> */

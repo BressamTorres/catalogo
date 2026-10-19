@@ -16,7 +16,7 @@ class ProductControllerTest extends TestCase
 
         $this->withoutVite();
 
-        Schema::create('products', function (Blueprint $table): void {
+        Schema::connection('erp_read')->create('products', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('business_id')->default(1);
             $table->string('sku');
@@ -91,7 +91,7 @@ class ProductControllerTest extends TestCase
 
     public function test_catalog_escapes_business_name_in_header(): void
     {
-        DB::table('businesses')->where('id', 1)->update([
+        DB::connection('erp_read')->table('businesses')->where('id', 1)->update([
             'trade_name' => '<script>alert("catalog")</script>',
         ]);
 
@@ -200,7 +200,7 @@ class ProductControllerTest extends TestCase
         ?string $photoDisk = null,
         int $businessId = 1,
     ): void {
-        DB::table('products')->insert([
+        DB::connection('erp_read')->table('products')->insert([
             'id' => $id,
             'business_id' => $businessId,
             'sku' => $sku,

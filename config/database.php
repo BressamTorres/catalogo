@@ -17,7 +17,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -61,6 +61,26 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'erp_read' => [
+            'driver' => 'mysql',
+            'url' => env('ERP_DB_URL'),
+            'host' => env('ERP_DB_HOST', '127.0.0.1'),
+            'port' => env('ERP_DB_PORT', '3306'),
+            'database' => env('ERP_DB_DATABASE', 'blog_infinit'),
+            'username' => env('ERP_DB_USERNAME', 'catalog_reader'),
+            'password' => env('ERP_DB_PASSWORD', ''),
+            'unix_socket' => env('ERP_DB_SOCKET', ''),
+            'charset' => env('ERP_DB_CHARSET', 'utf8mb4'),
+            'collation' => env('ERP_DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                Mysql::ATTR_SSL_CA => env('ERP_DB_SSL_CA'),
             ]) : [],
         ],
 
