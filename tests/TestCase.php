@@ -18,6 +18,8 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        $this->withoutVite();
+
         $inMemoryConnection = config('database.connections.sqlite');
 
         if (! is_array($inMemoryConnection)) {
